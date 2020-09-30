@@ -343,21 +343,12 @@ void SetupForkContent(
 		}
 	}, searchEngine->lifetime());
 
-	//
-	add(
-		tr::lng_settings_use_black_tray_icon(tr::now),
-		Core::App().settings().allRecentStickers(),
-		[=](bool checked) {
-			Core::App().settings().setAllRecentStickers(checked);
-			Core::App().saveSettingsDelayed();
-		});
-
 #ifndef Q_OS_LINUX
 #ifdef Q_OS_WIN
 	add(
 		tr::lng_settings_use_black_tray_icon(tr::now),
 		Core::App().settings().useBlackTrayIcon(),
-		[=](bool checked) {
+		[](bool checked) {
 			Core::App().settings().setUseBlackTrayIcon(checked);
 			Core::App().saveSettingsDelayed();
 			Core::App().domain().notifyUnreadBadgeChanged();
@@ -366,17 +357,16 @@ void SetupForkContent(
 	addRestart(
 		tr::lng_settings_use_black_tray_icon(tr::now),
 		[] { return Core::App().settings().useBlackTrayIcon(); },
-		[=](bool checked) {
+		[](bool checked) {
 			Core::App().settings().setUseBlackTrayIcon(checked);
 		});
 #endif // Q_OS_WIN
 
-	add(
+	addRestart(
 		tr::lng_settings_use_original_tray_icon(tr::now),
-		Core::App().settings().useOriginalTrayIcon(),
-		[=](bool checked) {
+		[] { return Core::App().settings().useOriginalTrayIcon(); },
+		[](bool checked) {
 			Core::App().settings().setUseOriginalTrayIcon(checked);
-			Core::App().saveSettingsDelayed();
 		});
 #endif // !Q_OS_LINUX
 

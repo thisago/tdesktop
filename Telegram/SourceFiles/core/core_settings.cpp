@@ -379,8 +379,8 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	_searchEngine = (searchEngine == 1);
 	_allRecentStickers = (allRecentStickers == 1);
 	_customStickerSize = customStickerSize;
-	_useBlackTrayIcon = (_useBlackTrayIcon == 1);
-	_useOriginalTrayIcon = (_useOriginalTrayIcon == 1);
+	_useBlackTrayIcon = (useBlackTrayIcon == 1);
+	_useOriginalTrayIcon = (useOriginalTrayIcon == 1);
 
 	_tabbedSelectorSectionEnabled = (tabbedSelectorSectionEnabled == 1);
 	auto uncheckedColumn = static_cast<Window::Column>(floatPlayerColumn);
