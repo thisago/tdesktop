@@ -1937,6 +1937,7 @@ void HistoryWidget::updateNotifyControls() {
 	if (!session().data().notifySilentPostsUnknown(_peer)) {
 		if (_silent) {
 			_silent->setChecked(session().data().notifySilentPosts(_peer));
+			updateFieldPlaceholder();
 		} else if (hasSilentToggle()) {
 			refreshSilentToggle();
 			updateControlsVisibility();
@@ -3125,10 +3126,6 @@ void HistoryWidget::toggleMuteUnmute() {
 		? 0
 		: Data::NotifySettings::kDefaultMutePeriod;
 	session().data().updateNotifySettings(_peer, muteForSeconds);
-}
-
-void HistoryWidget::onBroadcastSilentChange() {
-	updateFieldPlaceholder();
 }
 
 History *HistoryWidget::history() const {
