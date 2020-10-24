@@ -255,6 +255,12 @@ public:
 	void setExeLaunchWarning(bool warning) {
 		_exeLaunchWarning = warning;
 	}
+	[[nodiscard]] bool ipRevealWarning() const {
+		return _ipRevealWarning;
+	}
+	void setIpRevealWarning(bool warning) {
+		_ipRevealWarning = warning;
+	}
 	[[nodiscard]] bool loopAnimatedStickers() const {
 		return _loopAnimatedStickers;
 	}
@@ -595,6 +601,7 @@ private:
 	Ui::InputSubmitSettings _sendSubmitWay;
 	base::flat_map<QString, QString> _soundOverrides;
 	bool _exeLaunchWarning = true;
+	bool _ipRevealWarning = true;
 	bool _loopAnimatedStickers = true;
 	rpl::variable<bool> _largeEmoji = true;
 	rpl::variable<bool> _replaceEmoji = true;
