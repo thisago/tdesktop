@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/animations.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/image/image.h"
+#include "ui/cached_round_corners.h"
 #include "lottie/lottie_multi_player.h"
 #include "lottie/lottie_single_player.h"
 #include "lottie/lottie_animation.h"
@@ -38,8 +39,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "apiwrap.h"
 #include "api/api_toggling_media.h" // Api::ToggleFavedSticker
-#include "app.h"
-#include "facades.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_window.h"
 #include "core/application.h"
@@ -1539,7 +1538,7 @@ void StickersListWidget::paintStickers(Painter &p, QRect clip) {
 				auto selected = selectedButton ? (selectedButton->section == info.section) : false;
 				auto &textBg = selected ? st::stickersTrendingAdd.textBgOver : st::stickersTrendingAdd.textBg;
 
-				App::roundRect(p, myrtlrect(add), textBg, ImageRoundRadius::Small);
+				Ui::FillRoundRect(p, myrtlrect(add), textBg, ImageRoundRadius::Small);
 				if (set.ripple) {
 					set.ripple->paint(p, add.x(), add.y(), width());
 					if (set.ripple->empty()) {
@@ -1769,7 +1768,7 @@ void StickersListWidget::paintMegagroupEmptySet(Painter &p, int y, bool buttonSe
 		: st::stickerGroupCategoryAdd.textBg;
 
 	auto button = _megagroupSetButtonRect.translated(0, y);
-	App::roundRect(p, myrtlrect(button), textBg, ImageRoundRadius::Small);
+	Ui::FillRoundRect(p, myrtlrect(button), textBg, ImageRoundRadius::Small);
 	if (_megagroupSetButtonRipple) {
 		_megagroupSetButtonRipple->paint(p, button.x(), button.y(), width());
 		if (_megagroupSetButtonRipple->empty()) {
@@ -1849,7 +1848,7 @@ void StickersListWidget::paintSticker(Painter &p, Set &set, int y, int section, 
 	if (selected) {
 		auto tl = pos;
 		if (rtl()) tl.setX(width() - tl.x() - _singleSize.width());
-		App::roundRect(p, QRect(tl, _singleSize), st::emojiPanHover, StickerHoverCorners);
+		Ui::FillRoundRect(p, QRect(tl, _singleSize), st::emojiPanHover, Ui::StickerHoverCorners);
 	}
 
 	media->checkStickerSmall();
