@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <rpl/merge.h>
 #include "core/file_utilities.h"
 #include "core/crash_reports.h"
+#include "core/click_handler_types.h"
 #include "history/history.h"
 #include "history/history_message.h"
 #include "history/view/media/history_view_media.h"
@@ -71,6 +72,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QApplication>
 #include <QtCore/QMimeData>
+
+#include "api/api_as_copy.h"
 
 namespace {
 
@@ -1332,7 +1335,14 @@ void HistoryInner::mouseActionFinish(
 			: FullMsgId();
 		ActivateClickHandler(window(), activated, {
 			button,
-			QVariant::fromValue(pressedItemId)
+			QVariant::fromValue(ClickHandlerContext{
+				.itemId = pressedItemId,
+				.elementDelegate = [weak = Ui::MakeWeak(this)] {
+					return weak
+						? HistoryInner::ElementDelegate().get()
+						: nullptr;
+				},
+			})
 		});
 		return;
 	}
@@ -1572,6 +1582,26 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		return message;
 	};
 
+	const auto groupToSaved = [=] {
+		const auto ids = getSelectedItems();
+		if (ids.empty()) {
+			return;
+		}
+		auto toSend = Api::AsCopy::ToSend{
+			.peers = { session->data().peer(session->userPeerId()) }
+		};
+		const auto items = session->data().idsToItems(ids);
+		auto filtered = ranges::view::all(
+			items
+		) | ranges::view::filter([=](HistoryItem *item) -> bool {
+			return item->media();
+		}) | ranges::to_vector;
+		Api::AsCopy::SendAlbumFromItems(
+			std::move(filtered),
+			std::move(toSend));
+		_widget->clearSelected();
+	};
+
 	const auto addPhotoActions = [&](not_null<PhotoData*> photo) {
 		_menu->addAction(tr::lng_context_save_image(tr::now), App::LambdaDelayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
 			savePhotoToFile(photo);
@@ -1680,6 +1710,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
 					_widget->confirmDeleteSelected();
 				});
+			}
+			if (selectedState.count > 1 && selectedState.count <= 10) {
+				_menu->addAction(
+					tr::lng_context_group_to_save_messages(tr::now),
+					groupToSaved);
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();
@@ -1830,6 +1865,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
 					_widget->confirmDeleteSelected();
 				});
+			}
+			if (selectedState.count > 1 && selectedState.count <= 10) {
+				_menu->addAction(
+					tr::lng_context_group_to_save_messages(tr::now),
+					groupToSaved);
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();
@@ -2583,6 +2623,28 @@ void HistoryInner::elementShowTooltip(
 
 bool HistoryInner::elementIsGifPaused() {
 	return _controller->isGifPausedAtLeastFor(Window::GifPauseReason::Any);
+}
+
+void HistoryInner::elementSendBotCommand(
+		const QString &command,
+		const FullMsgId &context) {
+	if (auto peer = Ui::getPeerForMouseAction()) { // old way
+		auto bot = peer->isUser() ? peer->asUser() : nullptr;
+		if (!bot) {
+			if (const auto view = App::hoveredLinkItem()) {
+				// may return nullptr
+				bot = view->data()->fromOriginal()->asUser();
+			}
+		}
+		Ui::showPeerHistory(peer, ShowAtTheEndMsgId);
+		App::sendBotCommand(peer, bot, command);
+	} else {
+		App::insertBotCommand(command);
+	}
+}
+
+void HistoryInner::elementHandleViaClick(not_null<UserData*> bot) {
+	App::insertBotCommand('@' + bot->username);
 }
 
 auto HistoryInner::getSelectionState() const
@@ -3478,6 +3540,18 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 		}
 		bool elementShownUnread(not_null<const Element*> view) override {
 			return view->data()->unread();
+		}
+		void elementSendBotCommand(
+				const QString &command,
+				const FullMsgId &context) override {
+			if (Instance) {
+				Instance->elementSendBotCommand(command, context);
+			}
+		}
+		void elementHandleViaClick(not_null<UserData*> bot) override {
+			if (Instance) {
+				Instance->elementHandleViaClick(bot);
+			}
 		}
 	};
 

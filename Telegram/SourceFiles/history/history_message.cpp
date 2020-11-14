@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_media.h" // AddTimestampLinks.
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "main/main_session.h"
+#include "api/api_updates.h"
 #include "boxes/share_box.h"
 #include "boxes/confirm_box.h"
 #include "ui/toast/toast.h"
@@ -48,6 +49,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "styles/style_window.h"
 #include "chat_helpers/message_field.h"
+
+#include "api/api_as_copy.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
@@ -221,39 +224,17 @@ void FastShareMessage(not_null<HistoryItem*> item) {
 			std::vector<not_null<PeerData*>> &&result,
 			TextWithTags &&comment,
 			bool emptyText) {
-
-		const auto asCopySend = [&](not_null<HistoryItem*> item) {
-			for (const auto peer : result) {
-				const auto history = peer->owner().history(peer);
-				auto message = ApiWrap::MessageToSend(history);
-				if (!item->media()) {
-					message.textWithTags = PrepareEditText(item);
-					history->session().api().sendMessage(std::move(message));
-					continue;
-				}
-				message.textWithTags = emptyText
-					? comment
-					: PrepareEditText(item);
-				if (const auto id =
-						App::main()->currentReplyToIdFor(history)) {
-					message.action.replyTo = id;
-					history->clearCloudDraft();
-					history->clearLocalDraft();
-				}
-				if (const auto document = item->media()->document()) {
-					Api::SendExistingDocument(std::move(message), document);
-				} else if (const auto photo = item->media()->photo()) {
-					Api::SendExistingPhoto(std::move(message), photo);
-				}
-			}
+		auto toSend = Api::AsCopy::ToSend{
+			.peers = std::move(result),
+			.comment = std::move(comment),
+			.emptyText = emptyText,
+			.silent = (QGuiApplication::keyboardModifiers()
+				== Qt::ControlModifier)
 		};
-
 		if (item->groupId()) {
-			for (const auto i : history->owner().groups().find(item)->items) {
-				asCopySend(i);
-			}
+			Api::AsCopy::SendExistingAlbumFromItem(item, std::move(toSend));
 		} else if (const auto i = history->owner().message(data->msgIds[0])) {
-			asCopySend(i);
+			Api::AsCopy::SendExistingMediaFromItem(i, std::move(toSend));
 		}
 	};
 
@@ -1126,6 +1107,17 @@ void HistoryMessage::createComponents(const CreateConfig &config) {
 	_fromNameVersion = from ? from->nameVersion : 1;
 }
 
+bool HistoryMessage::checkRepliesPts(const MTPMessageReplies &data) const {
+	const auto channel = history()->peer->asChannel();
+	const auto pts = channel
+		? channel->pts()
+		: history()->session().updates().pts();
+	const auto repliesPts = data.match([&](const MTPDmessageReplies &data) {
+		return data.vreplies_pts().v;
+	});
+	return (repliesPts >= pts);
+}
+
 void HistoryMessage::setupForwardedComponent(const CreateConfig &config) {
 	const auto forwarded = Get<HistoryMessageForwarded>();
 	if (!forwarded) {
@@ -1360,7 +1352,9 @@ void HistoryMessage::applyEdition(const MTPDmessage &message) {
 	setForwardsCount(message.vforwards().value_or(-1));
 	setText(_media ? textWithEntities : EnsureNonEmpty(textWithEntities));
 	if (const auto replies = message.vreplies()) {
-		setReplies(*replies);
+		if (checkRepliesPts(*replies)) {
+			setReplies(*replies);
+		}
 	} else {
 		clearReplies();
 	}
@@ -1507,7 +1501,7 @@ void HistoryMessage::setText(const TextWithEntities &textWithEntities) {
 	}
 
 	clearIsolatedEmoji();
-	const auto context = Core::UiIntegration::Context{
+	const auto context = Core::MarkedTextContext{
 		.session = &history()->session()
 	};
 	_text.setMarkedText(
