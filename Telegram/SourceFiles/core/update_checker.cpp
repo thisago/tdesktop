@@ -1593,7 +1593,7 @@ void UpdateApplication() {
 		if (const auto window = App::wnd()) {
 			if (const auto controller = window->sessionController()) {
 				controller->showSection(
-					Info::Memento(
+					std::make_shared<Info::Memento>(
 						Info::Settings::Tag{ controller->session().user() },
 						Info::Section::SettingsType::Advanced),
 					Window::SectionShow());

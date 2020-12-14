@@ -707,7 +707,7 @@ HistoryWidget::HistoryWidget(
 			cancelReply(lastKeyboardUsed);
 			crl::on_main(this, [=, history = action.history]{
 				controller->showSection(
-					HistoryView::ScheduledMemento(history));
+					std::make_shared<HistoryView::ScheduledMemento>(history));
 			});
 		} else {
 			fastShowAtEnd(action.history);
@@ -777,9 +777,6 @@ void HistoryWidget::initVoiceRecordBar() {
 		});
 		_voiceRecordBar->setLockBottom(std::move(scrollHeight));
 	}
-	_voiceRecordBar->setEscFilter([=]() -> bool {
-		return _replyToId || (_nonEmptySelection && _list);
-	});
 
 	_voiceRecordBar->setSendButtonGeometryValue(_send->geometryValue());
 
@@ -838,6 +835,13 @@ void HistoryWidget::initVoiceRecordBar() {
 	_voiceRecordBar->lockViewportEvents(
 	) | rpl::start_with_next([=](not_null<QEvent*> e) {
 		_scroll->viewportEvent(e);
+	}, lifetime());
+
+	_voiceRecordBar->shownValue(
+	) | rpl::start_with_next([=](bool shown) {
+		if (!shown) {
+			applyDraft();
+		}
 	}, lifetime());
 
 	_voiceRecordBar->hideFast();
@@ -1518,7 +1522,7 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(const QString &query, U
 		} else if (to.section == Section::Scheduled) {
 			history->setDraft(Data::DraftKey::Scheduled(), std::move(draft));
 			controller()->showSection(
-				HistoryView::ScheduledMemento(history));
+				std::make_shared<HistoryView::ScheduledMemento>(history));
 		} else {
 			history->setLocalDraft(std::move(draft));
 			if (history == _history) {
@@ -1633,7 +1637,8 @@ void HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		: _history->localEditDraft()
 		? _history->localEditDraft()
 		: _history->localDraft();
-	auto fieldAvailable = canWriteMessage();
+	auto fieldAvailable = canWriteMessage()
+		&& !_voiceRecordBar->isActive();
 	if (!draft || (!_history->localEditDraft() && !fieldAvailable)) {
 		auto fieldWillBeHiddenAfterEdit = (!fieldAvailable && _editMsgId != 0);
 		clearFieldText(0, fieldHistoryAction);
@@ -2077,7 +2082,7 @@ void HistoryWidget::refreshScheduledToggle() {
 		_scheduled->show();
 		_scheduled->addClickHandler([=] {
 			controller()->showSection(
-				HistoryView::ScheduledMemento(_history));
+				std::make_shared<HistoryView::ScheduledMemento>(_history));
 		});
 		orderWidgets(); // Raise drag areas to the top.
 	} else if (_scheduled && !has) {
@@ -3103,7 +3108,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 		return;
 	}
 
-	if (_voiceRecordBar && _voiceRecordBar->isListenState()) {
+	if (_voiceRecordBar->isListenState()) {
 		_voiceRecordBar->requestToSendWithOptions(options);
 		return;
 	}
@@ -3888,7 +3893,7 @@ bool HistoryWidget::pushTabbedSelectorToThirdSection(
 	Core::App().settings().setTabbedReplacedWithInfo(false);
 	controller()->resizeForThirdSection();
 	controller()->showSection(
-		ChatHelpers::TabbedMemento(),
+		std::make_shared<ChatHelpers::TabbedMemento>(),
 		params.withThirdColumn());
 	return true;
 }
@@ -3917,6 +3922,14 @@ void HistoryWidget::setTabbedPanel(std::unique_ptr<TabbedPanel> panel) {
 			&st::historyRecordVoiceFgActive,
 			&st::historyRecordVoiceRippleBgActive);
 	}
+}
+
+bool HistoryWidget::preventsClose(Fn<void()> &&continueCallback) const {
+	if (_voiceRecordBar->isActive()) {
+		_voiceRecordBar->showDiscardBox(std::move(continueCallback));
+		return true;
+	}
+	return false;
 }
 
 void HistoryWidget::toggleTabbedSelectorMode() {
@@ -4334,7 +4347,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetClipboardImage();
+		auto image = Platform::GetImageFromClipboard();
 		if (image.isNull()) {
 			image = qvariant_cast<QImage>(data->imageData());
 		}
@@ -5387,7 +5400,7 @@ void HistoryWidget::refreshPinnedBarButton(bool many) {
 			const auto id = _pinnedTracker->currentMessageId();
 			if (id.message) {
 				controller()->showSection(
-					HistoryView::PinnedMemento(
+					std::make_shared<HistoryView::PinnedMemento>(
 						_history,
 						((!_migrated || id.message.channel)
 							? id.message.msg
@@ -5432,16 +5445,15 @@ void HistoryWidget::setupGroupCallTracker() {
 		_groupCallBar->barClicks(),
 		_groupCallBar->joinClicks()
 	) | rpl::start_with_next([=] {
-		const auto channel = _history->peer->asChannel();
-		if (!channel) {
-			return;
-		} else if (channel->amAnonymous()) {
+		const auto peer = _history->peer;
+		const auto channel = peer->asChannel();
+		if (channel && channel->amAnonymous()) {
 			Ui::ShowMultilineToast({
 				.text = tr::lng_group_call_no_anonymous(tr::now),
 				});
 			return;
-		} else if (channel->call()) {
-			controller()->startOrJoinGroupCall(channel);
+		} else if (peer->groupCall()) {
+			controller()->startOrJoinGroupCall(peer);
 		}
 	}, _groupCallBar->lifetime());
 
@@ -5646,7 +5658,7 @@ void HistoryWidget::editMessage(FullMsgId itemId) {
 }
 
 void HistoryWidget::editMessage(not_null<HistoryItem*> item) {
-	if (_voiceRecordBar && _voiceRecordBar->isListenState()) {
+	if (_voiceRecordBar->isListenState()) {
 		Ui::show(Box<InformBox>(tr::lng_edit_caption_voice(tr::now)));
 		return;
 	}
@@ -6120,6 +6132,8 @@ void HistoryWidget::escape() {
 		_fieldAutocomplete->hideAnimated();
 	} else if (_replyToId && _field->getTextWithTags().text.isEmpty()) {
 		cancelReply();
+	} else if (auto &voice = _voiceRecordBar; voice->isActive()) {
+		voice->showDiscardBox(nullptr, anim::type::normal);
 	} else {
 		_cancelRequests.fire({});
 	}
