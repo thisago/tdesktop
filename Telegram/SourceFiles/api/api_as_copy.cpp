@@ -57,7 +57,8 @@ MTPinputMedia InputMediaFromItem(not_null<HistoryItem*> i) {
 		return MTP_inputMediaDocument(
 			MTP_flags(MTPDinputMediaDocument::Flag(0)),
 			document->mtpInput(),
-			MTP_int(0));
+			MTP_int(0),
+			MTPstring());
 	} else if (const auto photo = i->media()->photo()) {
 		return MTP_inputMediaPhoto(
 			MTP_flags(MTPDinputMediaPhoto::Flag(0)),

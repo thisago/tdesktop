@@ -483,7 +483,7 @@ void Filler::addUserActions(not_null<UserData*> user) {
 			using AddBotToGroup = AddBotToGroupBoxController;
 			_addAction(
 				tr::lng_profile_invite_to_group(tr::now),
-				[=] { AddBotToGroup::Start(controller, user); });
+				[=] { AddBotToGroup::Start(user); });
 		}
 		addPollAction(user);
 		if (user->canExportChatHistory()) {
@@ -519,7 +519,7 @@ void Filler::addChatActions(not_null<ChatData*> chat) {
 		}
 		if (chat->canAddMembers()) {
 			_addAction(
-				tr::lng_profile_add_participant(tr::now),
+				tr::lng_channel_add_members(tr::now),
 				[=] { AddChatMembers(controller, chat); });
 		}
 		addPollAction(chat);
@@ -571,7 +571,9 @@ void Filler::addChannelActions(not_null<ChannelData*> channel) {
 		}
 		if (channel->canAddMembers()) {
 			_addAction(
-				tr::lng_channel_add_members(tr::now),
+				(channel->isMegagroup()
+					? tr::lng_channel_add_members(tr::now)
+					: tr::lng_channel_add_users(tr::now)),
 				[=] { PeerMenuAddChannelMembers(navigation, channel); });
 		}
 		addPollAction(channel);
@@ -809,7 +811,7 @@ void PeerMenuShareContactBox(
 	};
 	*weak = Ui::show(Box<PeerListBox>(
 		std::make_unique<ChooseRecipientBoxController>(
-			navigation,
+			&navigation->session(),
 			std::move(callback)),
 		[](not_null<PeerListBox*> box) {
 			box->addButton(tr::lng_cancel(), [=] {
@@ -1016,7 +1018,7 @@ QPointer<Ui::RpWidget> ShowForwardMessagesBox(
 	};
 	*weak = Ui::show(Box<PeerListBox>(
 		std::make_unique<ChooseRecipientBoxController>(
-			navigation,
+			&navigation->session(),
 			std::move(callback)),
 		std::move(initBox)), Ui::LayerOption::KeepOther);
 	return weak->data();
