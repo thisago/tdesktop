@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_message.h"
 
 #include "api/api_sending.h"
+#include "base/openssl_help.h"
 #include "lang/lang_keys.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
@@ -313,7 +314,7 @@ void FastShareMessage(not_null<HistoryItem*> item) {
 		auto generateRandom = [&] {
 			auto result = QVector<MTPlong>(data->msgIds.size());
 			for (auto &value : result) {
-				value = rand_value<MTPlong>();
+				value = openssl::RandomValue<MTPlong>();
 			}
 			return result;
 		};
@@ -462,6 +463,7 @@ struct HistoryMessage::CreateConfig {
 	QString authorOriginal;
 	TimeId originalDate = 0;
 	TimeId editDate = 0;
+	bool imported = false;
 
 	// For messages created from MTP structs.
 	const MTPMessageReplies *mtpReplies = nullptr;
@@ -488,6 +490,7 @@ void HistoryMessage::FillForwardedInfo(
 		config.savedFromPeer = peerFromMTP(*savedFromPeer);
 		config.savedFromMsgId = savedFromMsgId->v;
 	}
+	config.imported = data.is_imported();
 }
 
 HistoryMessage::HistoryMessage(
@@ -1140,7 +1143,8 @@ void HistoryMessage::setupForwardedComponent(const CreateConfig &config) {
 		: nullptr;
 	if (!forwarded->originalSender) {
 		forwarded->hiddenSenderInfo = std::make_unique<HiddenSenderInfo>(
-			config.senderNameOriginal);
+			config.senderNameOriginal,
+			config.imported);
 	}
 	forwarded->originalId = config.originalId;
 	forwarded->originalAuthor = config.authorOriginal;
@@ -1148,6 +1152,7 @@ void HistoryMessage::setupForwardedComponent(const CreateConfig &config) {
 	forwarded->savedFromPeer = history()->owner().peerLoaded(
 		config.savedFromPeer);
 	forwarded->savedFromMsgId = config.savedFromMsgId;
+	forwarded->imported = config.imported;
 }
 
 void HistoryMessage::refreshMedia(const MTPMessageMedia *media) {

@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_sending.h"
 #include "api/api_text_entities.h"
+#include "base/openssl_help.h"
 #include "boxes/confirm_box.h"
 #include "data/data_document.h"
 #include "data/data_drafts.h"
@@ -99,7 +100,7 @@ void SendAlbumFromItems(HistoryItemsList items, ToSend &&toSend) {
 		medias.push_back(PrepareAlbumItemMedia(
 			i,
 			InputMediaFromItem(i),
-			rand_value<uint64>(),
+			openssl::RandomValue<uint64>(),
 			toSend.emptyText,
 			medias.empty() ? toSend.comment : TextWithTags()));
 	}
