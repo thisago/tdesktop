@@ -233,6 +233,7 @@ public:
 	void checkStartUrl();
 	bool openLocalUrl(const QString &url, QVariant context);
 	bool openInternalUrl(const QString &url, QVariant context);
+	[[nodiscard]] QString changelogLink() const;
 
 	// Float player.
 	void setDefaultFloatPlayerDelegate(
