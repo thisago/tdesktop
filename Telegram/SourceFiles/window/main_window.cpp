@@ -280,7 +280,6 @@ void MainWindow::handleActiveChanged() {
 		Core::App().checkMediaViewActivation();
 	}
 	base::call_delayed(1, this, [this] {
-		updateTrayMenu();
 		handleActiveChangedHook();
 	});
 }
@@ -292,7 +291,7 @@ void MainWindow::handleVisibleChanged(bool visible) {
 			setWindowState(Qt::WindowMaximized);
 		}
 	} else {
-		_maximizedBeforeHide = cWindowPos().maximized;
+		_maximizedBeforeHide = Core::App().settings().windowPosition().maximized;
 	}
 
 	handleVisibleChangedHook(visible);
@@ -300,7 +299,6 @@ void MainWindow::handleVisibleChanged(bool visible) {
 
 void MainWindow::showFromTray() {
 	base::call_delayed(1, this, [this] {
-		updateTrayMenu();
 		updateGlobalMenu();
 	});
 	activate();
@@ -346,7 +344,7 @@ HitTestResult MainWindow::hitTest(const QPoint &p) const {
 
 bool MainWindow::hasShadow() const {
 	const auto center = geometry().center();
-	return Platform::WindowsNeedShadow()
+	return Ui::Platform::WindowExtentsSupported()
 		&& Ui::Platform::TranslucentWindowsSupported(center)
 		&& _title;
 }
@@ -424,8 +422,9 @@ void MainWindow::initSize() {
 		return;
 	}
 
-	auto position = cWindowPos();
-	DEBUG_LOG(("Window Pos: Initializing first %1, %2, %3, %4 (scale %5%, maximized %6)")
+	auto position = Core::App().settings().windowPosition();
+	DEBUG_LOG(("Window Pos: Initializing first %1, %2, %3, %4 "
+		"(scale %5%, maximized %6)")
 		.arg(position.x)
 		.arg(position.y)
 		.arg(position.w)
@@ -555,7 +554,6 @@ void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
 			handleTrayIconActication(reason);
 		});
 	});
-	App::wnd()->updateTrayMenu();
 }
 
 void MainWindow::paintEvent(QPaintEvent *e) {
@@ -625,7 +623,7 @@ void MainWindow::savePosition(Qt::WindowState state) {
 		return;
 	}
 
-	auto savedPosition = cWindowPos();
+	const auto &savedPosition = Core::App().settings().windowPosition();
 	auto realPosition = savedPosition;
 
 	if (state == Qt::WindowMaximized) {
@@ -657,7 +655,11 @@ void MainWindow::savePosition(Qt::WindowState state) {
 		}
 		if (chosen) {
 			auto screenGeometry = chosen->geometry();
-			DEBUG_LOG(("Window Pos: Screen found, geometry: %1, %2, %3, %4").arg(screenGeometry.x()).arg(screenGeometry.y()).arg(screenGeometry.width()).arg(screenGeometry.height()));
+			DEBUG_LOG(("Window Pos: Screen found, geometry: %1, %2, %3, %4"
+				).arg(screenGeometry.x()
+				).arg(screenGeometry.y()
+				).arg(screenGeometry.width()
+				).arg(screenGeometry.height()));
 			realPosition.x -= screenGeometry.x();
 			realPosition.y -= screenGeometry.y();
 			realPosition.moncrc = screenNameChecksum(chosen->name());
@@ -678,8 +680,8 @@ void MainWindow::savePosition(Qt::WindowState state) {
 				.arg(realPosition.h)
 				.arg(realPosition.scale)
 				.arg(Logs::b(realPosition.maximized)));
-			cSetWindowPos(realPosition);
-			Local::writeSettings();
+			Core::App().settings().setWindowPosition(realPosition);
+			Core::App().saveSettingsDelayed();
 		}
 	}
 }
@@ -689,7 +691,6 @@ bool MainWindow::minimizeToTray() {
 
 	closeWithoutDestroy();
 	controller().updateIsActiveBlur();
-	updateTrayMenu();
 	updateGlobalMenu();
 	showTrayTooltip();
 	return true;
