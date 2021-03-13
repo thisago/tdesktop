@@ -125,7 +125,7 @@ void SendAlbumFromItems(HistoryItemsList items, ToSend &&toSend) {
 			MTP_int(0)
 		)).done([=](const MTPUpdates &result) {
 			history->owner().session().api().applyUpdates(result);
-		}).fail([=](const RPCError &error) {
+		}).fail([=](const MTP::Error &error) {
 		}).send();
 	}
 }

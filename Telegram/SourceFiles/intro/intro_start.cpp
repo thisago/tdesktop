@@ -26,6 +26,8 @@ StartWidget::StartWidget(
 	setMouseTracking(true);
 	setTitleText(rpl::single(qsl("Telegram Desktop")));
 	setDescriptionText(tr::lng_intro_about());
+	setTitleText(rpl::single(qsl("Forkgram Desktop")));
+	setDescriptionText(rpl::single(qsl("Unofficial application.")));
 	show();
 }
 

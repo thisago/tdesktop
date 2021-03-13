@@ -24,6 +24,7 @@ constexpr auto kDefaultLanguage = "en"_cs;
 constexpr auto kCloudLangPackName = "tdesktop"_cs;
 constexpr auto kCustomLanguage = "#custom"_cs;
 constexpr auto kLangValuesLimit = 20000;
+constexpr auto kCustomBrand = "Forkgram"_cs;
 
 std::vector<QString> PrepareDefaultValues() {
 	auto result = std::vector<QString>();
@@ -92,7 +93,7 @@ void ValueParser::appendToResult(const char *nextBegin) {
 bool ValueParser::logError(const QString &text) {
 	_failed = true;
 	auto loggedKey = (_currentTag.size() > 0) ? (_key + QString(':') + _currentTag) : QString(_key);
-	LOG(("Lang Error: %1 (key '%2')").arg(text).arg(loggedKey));
+	LOG(("Lang Error: %1 (key '%2')").arg(text, loggedKey));
 	return false;
 }
 
@@ -705,6 +706,13 @@ void Instance::applyValue(const QByteArray &key, const QByteArray &value) {
 	ParseKeyValue(key, value, [&](ushort key, QString &&value) {
 		_nonDefaultSet[key] = 1;
 		if (!_derived) {
+			if (ranges::contains(tr::hasTelegram, key)) {
+				auto v = std::move(value);
+				_values[key] = v.replace(
+					QRegExp("Telegram"),
+					kCustomBrand.utf16());
+				return;
+			}
 			_values[key] = std::move(value);
 		} else if (!_derived->_nonDefaultSet[key]) {
 			_derived->_values[key] = std::move(value);

@@ -247,7 +247,7 @@ void MainWindow::psSetupTrayIcon() {
 			trayIcon,
 			&QSystemTrayIcon::messageClicked,
 			this,
-			[=] { App::wnd()->showFromTray(); });
+			[=] { showFromTray(); });
 		attachToTrayIcon(trayIcon);
 	}
 	updateIconCounters();
@@ -258,7 +258,7 @@ void MainWindow::psSetupTrayIcon() {
 void MainWindow::showTrayTooltip() {
 	if (trayIcon && !cSeenTrayTooltip()) {
 		trayIcon->showMessage(
-			AppName.utf16(),
+			AppNameF.utf16(),
 			tr::lng_tray_icon_text(tr::now),
 			QSystemTrayIcon::Information,
 			10000);
@@ -326,6 +326,21 @@ bool MainWindow::initSizeFromSystem() {
 	}
 	setGeometry(screen->availableGeometry());
 	return true;
+}
+
+QRect MainWindow::computeDesktopRect() const {
+	const auto flags = MONITOR_DEFAULTTONEAREST;
+	if (const auto monitor = MonitorFromWindow(psHwnd(), flags)) {
+		MONITORINFOEX info;
+		info.cbSize = sizeof(info);
+		GetMonitorInfo(monitor, &info);
+		return QRect(
+			info.rcWork.left,
+			info.rcWork.top,
+			info.rcWork.right - info.rcWork.left,
+			info.rcWork.bottom - info.rcWork.top);
+	}
+	return Window::MainWindow::computeDesktopRect();
 }
 
 void MainWindow::updateWindowIcon() {

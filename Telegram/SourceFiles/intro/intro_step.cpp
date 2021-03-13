@@ -166,7 +166,7 @@ void Step::finish(const MTPUser &user, QImage &&photo) {
 	api().request(MTPmessages_GetDialogFilters(
 	)).done([=](const MTPVector<MTPDialogFilter> &result) {
 		createSession(user, photo, result.v);
-	}).fail([=](const RPCError &error) {
+	}).fail([=](const MTP::Error &error) {
 		createSession(user, photo, QVector<MTPDialogFilter>());
 	}).send();
 }
@@ -356,7 +356,7 @@ void Step::prepareCoverMask() {
 	Assert(maskIntsPerLineAdded >= 0);
 	auto realHeight = static_cast<float64>(maskHeight - 1);
 	for (auto y = 0; y != maskHeight; ++y) {
-		auto color = anim::color(st::introCoverTopBg, st::introCoverBottomBg, y / realHeight);
+		auto color = anim::color(QColor(83, 61, 133), QColor(61, 44, 95), y / realHeight);
 		auto colorInt = anim::getPremultiplied(color);
 		for (auto x = 0; x != maskWidth; ++x) {
 			*maskInts++ = colorInt;
@@ -388,8 +388,9 @@ void Step::paintCover(Painter &p, int top) {
 		auto rightShown = qRound(shown * (right + st::introCoverRight.width()));
 		right = rightShown - st::introCoverRight.width();
 	}
-	st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width());
-	st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width());
+	const auto cOver = QColor(255, 255, 255, 40);
+	st::introCoverLeft.paint(p, left, coverHeight - st::introCoverLeft.height(), width(), cOver);
+	st::introCoverRight.paint(p, width() - right - st::introCoverRight.width(), coverHeight - st::introCoverRight.height(), width(), cOver);
 
 	auto planeLeft = (width() - st::introCoverIcon.width()) / 2 - st::introCoverIconLeft;
 	auto planeTop = top + st::introCoverIconTop;

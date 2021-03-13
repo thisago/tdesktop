@@ -114,7 +114,7 @@ void SetupUpdate(not_null<Ui::VerticalLayout*> container) {
 		st::settingsButton);
 	const auto update = Ui::CreateChild<Button>(
 		check.get(),
-		tr::lng_update_forkgram() | Ui::Text::ToUpper(),
+		tr::lng_update_telegram() | Ui::Text::ToUpper(),
 		st::settingsUpdate);
 	update->hide();
 	check->widthValue() | rpl::start_with_next([=](int width) {

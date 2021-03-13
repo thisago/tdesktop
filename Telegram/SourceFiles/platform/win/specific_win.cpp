@@ -120,7 +120,7 @@ QString psAppDataPath() {
 #ifdef OS_WIN_STORE
 		return appData.absolutePath() + qsl("/Telegram Desktop UWP/");
 #else // OS_WIN_STORE
-		return appData.absolutePath() + '/' + AppName.utf16() + '/';
+		return appData.absolutePath() + '/' + AppNameF.utf16() + '/';
 #endif // OS_WIN_STORE
 	}
 	return QString();
@@ -143,25 +143,6 @@ void psDoCleanup() {
 		AppUserModelId::cleanupShortcut();
 	} catch (...) {
 	}
-}
-
-QRect psDesktopRect() {
-	static QRect _monitorRect;
-	static crl::time _monitorLastGot = 0;
-	auto tnow = crl::now();
-	if (tnow > _monitorLastGot + 1000LL || tnow < _monitorLastGot) {
-		_monitorLastGot = tnow;
-		HMONITOR hMonitor = MonitorFromWindow(App::wnd()->psHwnd(), MONITOR_DEFAULTTONEAREST);
-		if (hMonitor) {
-			MONITORINFOEX info;
-			info.cbSize = sizeof(info);
-			GetMonitorInfo(hMonitor, &info);
-			_monitorRect = QRect(info.rcWork.left, info.rcWork.top, info.rcWork.right - info.rcWork.left, info.rcWork.bottom - info.rcWork.top);
-		} else {
-			_monitorRect = QApplication::desktop()->availableGeometry(App::wnd());
-		}
-	}
-	return _monitorRect;
 }
 
 int psCleanup() {
