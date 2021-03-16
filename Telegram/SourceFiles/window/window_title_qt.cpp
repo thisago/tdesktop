@@ -39,6 +39,7 @@ void RemoveDuplicates(std::vector<T> &v) {
 TitleWidgetQt::TitleWidgetQt(QWidget *parent)
 : TitleWidget(parent)
 , _st(st::defaultWindowTitle)
+, _top(this, _st.top)
 , _minimize(this, _st.minimize)
 , _maximizeRestore(this, _st.maximize)
 , _close(this, _st.close)
@@ -62,6 +63,15 @@ TitleWidgetQt::TitleWidgetQt(QWidget *parent)
 		_close->clearState();
 	});
 	_close->setPointerCursor(false);
+	_top->setClickedCallback([=]() {
+		_topState = !_topState;
+		window()->setWindowFlag(Qt::WindowStaysOnTopHint, _topState);
+		window()->windowHandle()->destroy();
+		window()->windowHandle()->create();
+		window()->show();
+		updateButtonsState();
+	});
+	_top->setPointerCursor(false);
 
 	Ui::Platform::TitleControlsLayoutChanged(
 	) | rpl::start_with_next([=] {
@@ -122,6 +132,7 @@ Ui::IconButton *TitleWidgetQt::controlWidget(Control control) const {
 	case Control::Minimize: return _minimize;
 	case Control::Maximize: return _maximizeRestore;
 	case Control::Close: return _close;
+	case Control::OnTop: return _top;
 	}
 
 	return nullptr;
@@ -179,6 +190,12 @@ void TitleWidgetQt::updateControlsPosition() {
 		_close->show();
 	} else {
 		_close->hide();
+	}
+
+	if (controlPresent(Control::OnTop)) {
+		_top->show();
+	} else {
+		_top->hide();
 	}
 
 	updateControlsPositionBySide(controlsLeft, false);
@@ -335,6 +352,16 @@ void TitleWidgetQt::updateButtonsState() {
 		_activeState
 		? &_st.closeIconActiveOver
 		: nullptr);
+
+	if (_top) {
+		const auto top = _activeState
+			? (_topState ? &_st.topIconActive : &_st.top2IconActive)
+			: (_topState ? &_st.top.icon : &_st.top2Icon);
+		const auto topOver = _activeState
+			? (_topState ? &_st.topIconActiveOver : &_st.top2IconActiveOver)
+			: (_topState ? &_st.top.iconOver : &_st.top2IconOver);
+		_top->setIconOverride(top, topOver);
+	}
 }
 
 QMargins TitleWidgetQt::resizeArea() const {
