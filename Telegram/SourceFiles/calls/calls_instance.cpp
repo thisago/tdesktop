@@ -323,9 +323,9 @@ void Instance::handleUpdate(
 	}, [&](const MTPDupdatePhoneCallSignalingData &data) {
 		handleSignalingData(session, data);
 	}, [&](const MTPDupdateGroupCall &data) {
-		handleGroupCallUpdate(session, data.vcall());
+		handleGroupCallUpdate(session, update);
 	}, [&](const MTPDupdateGroupCallParticipants &data) {
-		handleGroupCallUpdate(session, data);
+		handleGroupCallUpdate(session, update);
 	}, [](const auto &) {
 		Unexpected("Update type in Calls::Instance::handleUpdate.");
 	});
@@ -410,31 +410,38 @@ void Instance::handleCallUpdate(
 
 void Instance::handleGroupCallUpdate(
 		not_null<Main::Session*> session,
-		const MTPGroupCall &call) {
-	const auto callId = call.match([](const auto &data) {
-		return data.vid().v;
+		const MTPUpdate &update) {
+	const auto callId = update.match([](const MTPDupdateGroupCall &data) {
+		return data.vcall().match([](const auto &data) {
+			return data.vid().v;
+		});
+	}, [](const MTPDupdateGroupCallParticipants &data) {
+		return data.vcall().match([&](const MTPDinputGroupCall &data) {
+			return data.vid().v;
+		});
+	}, [](const auto &) -> uint64 {
+		Unexpected("Type in Instance::handleGroupCallUpdate.");
 	});
 	if (const auto existing = session->data().groupCall(callId)) {
-		existing->applyUpdate(call);
+		existing->enqueueUpdate(update);
+	} else {
+		applyGroupCallUpdateChecked(session, update);
 	}
+
 	if (_currentGroupCall
 		&& (&_currentGroupCall->peer()->session() == session)) {
-		_currentGroupCall->handleUpdate(call);
+		update.match([&](const MTPDupdateGroupCall &data) {
+			_currentGroupCall->handlePossibleCreateOrJoinResponse(data);
+		}, [](const auto &) {
+		});
 	}
 }
 
-void Instance::handleGroupCallUpdate(
+void Instance::applyGroupCallUpdateChecked(
 		not_null<Main::Session*> session,
-		const MTPDupdateGroupCallParticipants &update) {
-	const auto callId = update.vcall().match([](const auto &data) {
-		return data.vid().v;
-	});
-	if (const auto existing = session->data().groupCall(callId)) {
-		existing->applyUpdate(update);
-	}
+		const MTPUpdate &update) {
 	if (_currentGroupCall
-		&& (&_currentGroupCall->peer()->session() == session)
-		&& (_currentGroupCall->id() == callId)) {
+		&& (&_currentGroupCall->peer()->session() == session)) {
 		_currentGroupCall->handleUpdate(update);
 	}
 }
