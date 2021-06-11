@@ -18,6 +18,9 @@ endif()
 add_subdirectory(lib_storage)
 add_subdirectory(lib_lottie)
 add_subdirectory(lib_qr)
+if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+    add_subdirectory(lib_waylandshells)
+endif()
 add_subdirectory(lib_webrtc)
 add_subdirectory(lib_webview)
 add_subdirectory(codegen)
@@ -110,6 +113,7 @@ elseif (LINUX)
     if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
         target_link_libraries(Telegram
         PRIVATE
+            desktop-app::lib_waylandshells
             desktop-app::external_kwayland
         )
     endif()
@@ -279,6 +283,8 @@ PRIVATE
     calls/group/calls_group_call.cpp
     calls/group/calls_group_call.h
     calls/group/calls_group_common.h
+    calls/group/calls_group_invite_controller.cpp
+    calls/group/calls_group_invite_controller.h
     calls/group/calls_group_members.cpp
     calls/group/calls_group_members.h
     calls/group/calls_group_members_row.cpp
@@ -319,6 +325,8 @@ PRIVATE
     calls/calls_userpic.h
     calls/calls_video_bubble.cpp
     calls/calls_video_bubble.h
+    calls/calls_video_incoming.cpp
+    calls/calls_video_incoming.h
     chat_helpers/bot_keyboard.cpp
     chat_helpers/bot_keyboard.h
     chat_helpers/emoji_keywords.cpp
@@ -723,6 +731,8 @@ PRIVATE
     main/main_session.h
     main/main_session_settings.cpp
     main/main_session_settings.h
+    media/system_media_controls_manager.h
+    media/system_media_controls_manager.cpp
     media/audio/media_audio.cpp
     media/audio/media_audio.h
     media/audio/media_audio_capture.cpp
@@ -777,10 +787,20 @@ PRIVATE
     media/streaming/media_streaming_video_track.h
     media/view/media_view_group_thumbs.cpp
     media/view/media_view_group_thumbs.h
+    media/view/media_view_overlay_opengl.cpp
+    media/view/media_view_overlay_opengl.h
+    media/view/media_view_overlay_raster.cpp
+    media/view/media_view_overlay_raster.h
+    media/view/media_view_overlay_renderer.h
     media/view/media_view_overlay_widget.cpp
     media/view/media_view_overlay_widget.h
     media/view/media_view_pip.cpp
     media/view/media_view_pip.h
+    media/view/media_view_pip_opengl.cpp
+    media/view/media_view_pip_opengl.h
+    media/view/media_view_pip_raster.cpp
+    media/view/media_view_pip_raster.h
+    media/view/media_view_pip_renderer.h
     media/view/media_view_playback_controls.cpp
     media/view/media_view_playback_controls.h
     media/view/media_view_playback_progress.cpp
@@ -851,8 +871,6 @@ PRIVATE
     platform/linux/linux_gtk_integration.h
     platform/linux/linux_gtk_open_with_dialog.cpp
     platform/linux/linux_gtk_open_with_dialog.h
-    platform/linux/linux_mpris_support.cpp
-    platform/linux/linux_mpris_support.h
     platform/linux/linux_notification_service_watcher.cpp
     platform/linux/linux_notification_service_watcher.h
     platform/linux/linux_wayland_integration_dummy.cpp
@@ -927,8 +945,6 @@ PRIVATE
     platform/win/windows_dlls.h
     platform/win/windows_event_filter.cpp
     platform/win/windows_event_filter.h
-    platform/win/windows_system_media_controls_manager.cpp
-    platform/win/windows_system_media_controls_manager.h
     platform/platform_audio.h
     platform/platform_file_utilities.h
     platform/platform_launcher.h
@@ -1232,8 +1248,6 @@ if (WIN32)
     #     $<IF:${release},"Appending compatibility manifest.","Finalizing build.">
     # )
 elseif (APPLE)
-    target_link_libraries(Telegram PRIVATE desktop-app::external_sp_media_key_tap)
-
     if (NOT DESKTOP_APP_USE_PACKAGED)
         target_link_libraries(Telegram PRIVATE desktop-app::external_iconv)
     endif()

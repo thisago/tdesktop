@@ -475,7 +475,8 @@ callTitle: WindowTitle(defaultWindowTitle) {
 	top2IconActive: callTitleMinimizeIcon;
 	top2IconActiveOver: callTitleMinimizeIcon;
 }
-callTitleShadow: icon {{ "calls/calls_shadow_controls", windowShadowFg }};
+callTitleShadowRight: icon {{ "calls/calls_shadow_controls", windowShadowFg }};
+callTitleShadowLeft: icon {{ "calls/calls_shadow_controls-flip_horizontal", windowShadowFg }};
 
 callErrorToast: Toast(defaultToast) {
 	minWidth: 240px;
@@ -927,7 +928,7 @@ groupCallLevelMeter: LevelMeter(defaultLevelMeter) {
 	lineSpacing: 5px;
 	lineCount: 44;
 	activeFg: groupCallActiveFg;
-	inactiveFg: groupCallMemberNotJoinedStatus;
+	inactiveFg: groupCallMembersBgRipple;
 }
 groupCallCheckboxIcon: icon {{ "default_checkbox_check", groupCallMembersFg, point(4px, 7px) }};
 groupCallCheck: Check(defaultCheck) {
@@ -1150,6 +1151,8 @@ desktopCaptureMargins: margins(12px, 8px, 12px, 6px);
 desktopCaptureSourceSize: size(235px, 165px);
 desktopCaptureSourceSkips: size(2px, 10px);
 desktopCaptureSourceTitle: WindowTitle(groupCallTitle) {
+	bg: groupCallMembersBgOver;
+	bgActive: groupCallMembersBgOver;
 	height: 21px;
 }
 desktopCapturePadding: margins(7px, 7px, 7px, 33px);
@@ -1165,8 +1168,8 @@ desktopCaptureCancel: RoundButton(defaultBoxButton) {
 	textFgOver: groupCallActiveFg;
 	numbersTextFg: groupCallActiveFg;
 	numbersTextFgOver: groupCallActiveFg;
-	textBg: groupCallBg;
-	textBgOver: groupCallMembersBg;
+	textBg: groupCallMembersBg;
+	textBgOver: groupCallMembersBgOver;
 
 	ripple: groupCallRipple;
 }
@@ -1266,3 +1269,4 @@ groupCallNiceTooltipLabel: FlatLabel(defaultImportantTooltipLabel) {
 	}
 }
 groupCallNiceTooltipTop: 4px;
+groupCallPaused: icon {{ "calls/video_large_paused", groupCallVideoTextFg }};
