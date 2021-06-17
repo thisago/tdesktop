@@ -887,6 +887,16 @@ void ListWidget::unregisterHeavyItem(not_null<const BaseLayout*> item) {
 	}
 }
 
+void ListWidget::openPhoto(not_null<PhotoData*> photo, FullMsgId id) {
+	_controller->parentController()->openPhoto(photo, id);
+}
+
+void ListWidget::openDocument(
+		not_null<DocumentData*> document,
+		FullMsgId id) {
+	_controller->parentController()->openDocument(document, id);
+}
+
 SparseIdsMergedSlice::Key ListWidget::sliceKey(
 		UniversalMsgId universalId) const {
 	using Key = SparseIdsMergedSlice::Key;
@@ -1338,6 +1348,7 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 				_dateBadge.text,
 				_visibleTop,
 				outerWidth,
+				false,
 				st::roundedBg,
 				st::roundedFg);
 		}
@@ -1434,7 +1445,7 @@ void ListWidget::showContextMenu(
 		tr::lng_context_to_msg(tr::now),
 		[=] {
 			if (const auto item = owner->message(itemFullId)) {
-				Ui::showPeerHistoryAtItem(item);
+				_controller->parentController()->showPeerHistoryAtItem(item);
 			}
 		});
 
