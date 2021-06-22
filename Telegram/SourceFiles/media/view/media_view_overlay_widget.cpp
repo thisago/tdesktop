@@ -50,6 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo_media.h"
 #include "data/data_document_media.h"
 #include "data/data_document_resolver.h"
+#include "data/data_file_click_handler.h"
 #include "window/themes/window_theme_preview.h"
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
@@ -2275,9 +2276,7 @@ void OverlayWidget::show(OpenRequest request) {
 		}
 
 		clearControlsState();
-		if (contextPeer) {
-			_firstOpenedPeerPhoto = true;
-		}
+		_firstOpenedPeerPhoto = (contextPeer != nullptr);
 		assignMediaPointer(photo);
 
 		displayPhoto(photo, contextPeer ? nullptr : contextItem);
@@ -2303,7 +2302,7 @@ void OverlayWidget::show(OpenRequest request) {
 			request.cloudTheme()
 				? *request.cloudTheme()
 				: Data::CloudTheme(),
-			false);
+			request.continueStreaming());
 		if (!isHidden()) {
 			preloadData(0);
 			activateControls();
