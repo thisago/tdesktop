@@ -1,6 +1,10 @@
 name: Linux.
 
 on:
+  release:
+    types: [published]
+  repository_dispatch:
+    types: ["Restart linux workflow."]
   push:
     paths-ignore:
       - 'docs/**'
@@ -61,12 +65,6 @@ jobs:
       matrix:
         defines:
           - ""
-          - "DESKTOP_APP_DISABLE_DBUS_INTEGRATION"
-          - "DESKTOP_APP_DISABLE_X11_INTEGRATION"
-          - "DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION"
-          - "DESKTOP_APP_DISABLE_GTK_INTEGRATION"
-          - "LIBTGVOIP_DISABLE_ALSA"
-          - "LIBTGVOIP_DISABLE_PULSEAUDIO"
 
     env:
       UPLOAD_ARTIFACT: "false"
@@ -86,6 +84,26 @@ jobs:
           gcc --version
           ln -s $LibrariesPath Libraries
 
+          yum -y install epel-release
+          yum -y install wget p7zip
+
+          cd $REPO_NAME
+          cd ..
+
+          mkdir DesktopPrivate
+          cd DesktopPrivate
+
+          echo "#pragma once" > alpha_private.h
+          echo "#pragma once" > packer_private.h
+
+          echo '${{ secrets.ALPHA_PRIVATE }}' >> alpha_private.h
+          echo '${{ secrets.PACKER_PRIVATE }}' >> packer_private.h
+
+          cd ..
+
+          wget ${{ secrets.PACK_FILE }} -O p.7z
+          7za x p.7z -p${{ secrets.PACK_FILE_PASSWORD }}
+
       - name: Telegram Desktop build.
         run: |
           cd $REPO_NAME/Telegram
@@ -100,20 +118,20 @@ jobs:
           fi
 
           ./configure.sh \
-          -D CMAKE_C_FLAGS="-Werror" \
-          -D CMAKE_CXX_FLAGS="-Werror" \
           -D CMAKE_EXE_LINKER_FLAGS="-s" \
-          -D TDESKTOP_API_TEST=ON \
+          -D TDESKTOP_API_ID=${{ secrets.API_ID }} \
+          -D TDESKTOP_API_HASH=${{ secrets.API_HASH }} \
+          -D DESKTOP_APP_SPECIAL_TARGET=linux \
           -D DESKTOP_APP_USE_PACKAGED=OFF \
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
           $DEFINE
 
-          cd ../out/Debug
+          cd ../out/Release
           make -j$(nproc)
 
       - name: Check.
         run: |
-          filePath="$REPO_NAME/out/Debug/bin/Telegram"
+          filePath="$REPO_NAME/out/Release/Release/Telegram"
           if test -f "$filePath"; then
             echo "Build successfully done! :)"
 
@@ -124,15 +142,26 @@ jobs:
             exit 1
           fi
 
-      - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
+      - name: Compress.
+        if: (github.event_name == 'release')
         run: |
-          cd $REPO_NAME/out/Debug/bin
-          mkdir artifact
-          mv Telegram artifact/
-      - uses: actions/upload-artifact@master
-        if: env.UPLOAD_ARTIFACT == 'true'
-        name: Upload artifact.
+          filePath="$REPO_NAME/out/Release/Release/Telegram"
+          cp $filePath .
+          tar -cJvf Telegram.tar.xz Telegram
+
+      - name: Deploy.
+        if: (github.event_name == 'release')
+        run: |
+          bash ci_start.sh &> /dev/null
+
+      - name: Upload.
+        if: (github.event_name == 'release')
+        uses: lovasoa/upload-release-asset@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.REPO_NAME }}/out/Debug/bin/artifact/
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./Telegram.tar.xz
+          asset_label: "Linux 64 bit: Binary"
+          asset_name: Telegram.tar.xz
+          asset_content_type: application/x-gzip
