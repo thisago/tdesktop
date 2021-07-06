@@ -434,6 +434,13 @@ public:
 		_videoPipGeometry = geometry;
 	}
 
+	[[nodiscard]] QByteArray photoEditorBrush() const {
+		return _photoEditorBrush;
+	}
+	void setPhotoEditorBrush(QByteArray brush) {
+		_photoEditorBrush = brush;
+	}
+
 	[[nodiscard]] float64 rememberedSongVolume() const {
 		return _rememberedSongVolume;
 	}
@@ -777,6 +784,8 @@ private:
 	float64 _rememberedSongVolume = kDefaultVolume;
 	bool _rememberedSoundNotifyFromTray = false;
 	bool _rememberedFlashBounceNotifyFromTray = false;
+
+	QByteArray _photoEditorBrush;
 
 };
 

@@ -10,7 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/themes/window_theme.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
-#include "app.h"
 #include "core/application.h"
 
 #include <QtCore/QCoreApplication>
@@ -80,7 +79,7 @@ QPixmap PrepareOuterWide(const style::RoundCheckbox *st) {
 			size + 2. * half,
 			size + 2. * half));
 	}
-	return App::pixmapFromImageInPlace(std::move(result));
+	return Ui::PixmapFromImage(std::move(result));
 }
 
 QPixmap PrepareInner(const style::RoundCheckbox *st, bool displayInactive) {
@@ -103,7 +102,7 @@ QPixmap PrepareInner(const style::RoundCheckbox *st, bool displayInactive) {
 			size - (displayInactive ? 0. : 2. * half),
 			size - (displayInactive ? 0. : 2. * half)));
 	}
-	return App::pixmapFromImageInPlace(std::move(result));
+	return Ui::PixmapFromImage(std::move(result));
 }
 
 QPixmap PrepareCheck(const style::RoundCheckbox *st) {
@@ -117,7 +116,7 @@ QPixmap PrepareCheck(const style::RoundCheckbox *st) {
 		Painter p(&result);
 		st->check.paint(p, 0, 0, size);
 	}
-	return App::pixmapFromImageInPlace(std::move(result));
+	return Ui::PixmapFromImage(std::move(result));
 }
 
 QRect WideDestRect(
@@ -239,7 +238,7 @@ QPixmap CheckCaches::paintFrame(
 			remove,
 			remove));
 	}
-	return App::pixmapFromImageInPlace(std::move(result));
+	return Ui::PixmapFromImage(std::move(result));
 }
 
 CheckCaches *FrameCaches() {
@@ -287,8 +286,8 @@ void prepareCheckCaches(const style::RoundCheckbox *st, bool displayInactive, QP
 		auto ellipse = QRect((wideSize - size) / 2, (wideSize - size) / 2, size, size);
 		st->check.paint(p, ellipse.topLeft(), wideSize);
 	}
-	checkBgCache = App::pixmapFromImageInPlace(std::move(cache));
-	checkFullCache = App::pixmapFromImageInPlace(std::move(cacheIcon));
+	checkBgCache = Ui::PixmapFromImage(std::move(cache));
+	checkFullCache = Ui::PixmapFromImage(std::move(cacheIcon));
 }
 
 } // namespace
@@ -380,7 +379,7 @@ void RoundCheckbox::prepareInactiveCache() {
 		p.setBrush(_st.bgInactive);
 		p.drawEllipse(ellipse);
 	}
-	_inactiveCacheBg = App::pixmapFromImageInPlace(std::move(cacheBg));
+	_inactiveCacheBg = Ui::PixmapFromImage(std::move(cacheBg));
 
 	{
 		Painter p(&cacheFg);
@@ -392,7 +391,7 @@ void RoundCheckbox::prepareInactiveCache() {
 		p.setBrush(Qt::NoBrush);
 		p.drawEllipse(ellipse);
 	}
-	_inactiveCacheFg = App::pixmapFromImageInPlace(std::move(cacheFg));
+	_inactiveCacheFg = Ui::PixmapFromImage(std::move(cacheFg));
 }
 
 RoundImageCheckbox::RoundImageCheckbox(const style::RoundImageCheckbox &st, Fn<void()> updateCallback, PaintRoundImage &&paintRoundImage)
@@ -477,7 +476,7 @@ void RoundImageCheckbox::prepareWideCache() {
 			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 			_paintRoundImage(p, (wideSize - size) / 2, (wideSize - size) / 2, wideSize, size);
 		}
-		_wideCache = App::pixmapFromImageInPlace(std::move(cache));
+		_wideCache = Ui::PixmapFromImage(std::move(cache));
 	}
 }
 
