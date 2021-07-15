@@ -474,7 +474,6 @@ void Updates::differenceDone(const MTPupdates_Difference &result) {
 		stateDone(d.vstate());
 	} break;
 	case mtpc_updates_differenceTooLong: {
-		auto &d = result.c_updates_differenceTooLong();
 		LOG(("API Error: updates.differenceTooLong is not supported by Telegram Desktop!"));
 	} break;
 	};
@@ -999,8 +998,8 @@ void Updates::handleSendActionUpdate(
 			const auto chat = peer->asChat();
 			const auto channel = peer->asChannel();
 			const auto active = chat
-				? (chat->flags() & MTPDchat::Flag::f_call_active)
-				: (channel->flags() & MTPDchannel::Flag::f_call_active);
+				? (chat->flags() & ChatDataFlag::CallActive)
+				: (channel->flags() & ChannelDataFlag::CallActive);
 			if (active) {
 				_pendingSpeakingCallParticipants.emplace(
 					peer).first->second[fromId] = now;
@@ -1030,9 +1029,6 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 		const auto &d = updates.c_updateShortMessage();
 		const auto flags = mtpCastFlags(d.vflags().v)
 			| MTPDmessage::Flag::f_from_id;
-		const auto peerUserId = d.is_out()
-			? d.vuser_id()
-			: MTP_int(_session->userId().bare); // #TODO ids
 		_session->data().addNewMessage(
 			MTP_message(
 				MTP_flags(flags),
@@ -1250,7 +1246,6 @@ void Updates::applyUpdateNoPtsCheck(const MTPUpdate &update) {
 
 	case mtpc_updatePinnedMessages: {
 		const auto &d = update.c_updatePinnedMessages();
-		const auto peerId = peerFromMTP(d.vpeer());
 		for (const auto &msgId : d.vmessages().v) {
 			const auto item = session().data().message(0, msgId.v);
 			if (item) {
@@ -1607,7 +1602,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 				history->setUnreadMark(data.is_unread());
 			}
 		}, [&](const MTPDdialogPeerFolder &dialog) {
-			const auto id = dialog.vfolder_id().v; // #TODO archive
+			//const auto id = dialog.vfolder_id().v; // #TODO archive
 			//if (const auto folder = session().data().folderLoaded(id)) {
 			//	folder->setUnreadMark(data.is_unread());
 			//}
@@ -1817,11 +1812,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		const auto &d = update.c_updatePeerSettings();
 		const auto peerId = peerFromMTP(d.vpeer());
 		if (const auto peer = session().data().peerLoaded(peerId)) {
-			const auto settings = d.vsettings().match([](
-					const MTPDpeerSettings &data) {
-				return data.vflags().v;
-			});
-			peer->setSettings(settings);
+			peer->setSettings(d.vsettings());
 		}
 	} break;
 
@@ -1872,19 +1863,15 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	} break;
 
 	case mtpc_updateNewEncryptedMessage: {
-		auto &d = update.c_updateNewEncryptedMessage();
 	} break;
 
 	case mtpc_updateEncryptedChatTyping: {
-		auto &d = update.c_updateEncryptedChatTyping();
 	} break;
 
 	case mtpc_updateEncryption: {
-		auto &d = update.c_updateEncryption();
 	} break;
 
 	case mtpc_updateEncryptedMessagesRead: {
-		auto &d = update.c_updateEncryptedMessagesRead();
 	} break;
 
 	case mtpc_updatePhoneCall:
@@ -1899,6 +1886,26 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		const auto &d = update.c_updatePeerBlocked();
 		if (const auto peer = session().data().peerLoaded(peerFromMTP(d.vpeer_id()))) {
 			peer->setIsBlocked(mtpIsTrue(d.vblocked()));
+		}
+	} break;
+
+	case mtpc_updateBotCommands: {
+		const auto &d = update.c_updateBotCommands();
+		if (const auto peer = session().data().peerLoaded(peerFromMTP(d.vpeer()))) {
+			const auto botId = UserId(d.vbot_id().v);
+			if (const auto user = peer->asUser()) {
+				if (user->isBot() && user->id == peerFromUser(botId)) {
+					if (Data::UpdateBotCommands(user->botInfo->commands, d.vcommands())) {
+						session().data().botCommandsChanged(user);
+					}
+				}
+			} else if (const auto chat = peer->asChat()) {
+				chat->setBotCommands(botId, d.vcommands());
+			} else if (const auto megagroup = peer->asMegagroup()) {
+				if (megagroup->mgInfo->updateBotCommands(botId, d.vcommands())) {
+					session().data().botCommandsChanged(megagroup);
+				}
+			}
 		}
 	} break;
 

@@ -1615,7 +1615,6 @@ public:
 			return false;
 		}
 
-		int res = 0;
 		char err[AV_ERROR_MAX_STRING_SIZE] = { 0 };
 
 		for (int32 i = 0, l = fmtContext->nb_streams; i < l; ++i) {
