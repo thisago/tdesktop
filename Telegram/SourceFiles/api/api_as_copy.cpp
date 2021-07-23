@@ -117,7 +117,7 @@ void SendAlbumFromItems(HistoryItemsList items, ToSend &&toSend) {
 				? MTPmessages_SendMultiMedia::Flag::f_silent
 				: MTPmessages_SendMultiMedia::Flag(0));
 
-		const auto requestId = api.request(MTPmessages_SendMultiMedia(
+		api.request(MTPmessages_SendMultiMedia(
 			MTP_flags(flags),
 			peer->input,
 			MTP_int(replyTo),
