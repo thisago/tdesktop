@@ -9,7 +9,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - '!docs/building-cmake.md'
+      - '!docs/building-linux.md'
       - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
@@ -17,7 +17,6 @@ on:
       - '!.github/workflows/linux.yml'
       - 'snap/**'
       - 'Telegram/build/**'
-      - 'Telegram/Patches/**'
       - 'Telegram/Resources/uwp/**'
       - 'Telegram/Resources/winrc/**'
       - 'Telegram/SourceFiles/platform/win/**'
@@ -29,7 +28,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - '!docs/building-cmake.md'
+      - '!docs/building-linux.md'
       - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
@@ -37,7 +36,6 @@ on:
       - '!.github/workflows/linux.yml'
       - 'snap/**'
       - 'Telegram/build/**'
-      - 'Telegram/Patches/**'
       - 'Telegram/Resources/uwp/**'
       - 'Telegram/Resources/winrc/**'
       - 'Telegram/SourceFiles/platform/win/**'
@@ -112,7 +110,10 @@ jobs:
           if [ -n "${{ matrix.defines }}" ]; then
             DEFINE="-D ${{ matrix.defines }}=ON"
             if [ "${{ matrix.defines }}" == "DESKTOP_APP_DISABLE_DBUS_INTEGRATION" ]; then
-              DEFINE="$DEFINE -D DESKTOP_APP_DISABLE_GTK_INTEGRATION=ON"
+              DEFINE="$DEFINE -D DESKTOP_APP_DISABLE_GTK_INTEGRATION=ON -D DESKTOP_APP_DISABLE_WEBKITGTK=ON"
+            fi
+            if [ "${{ matrix.defines }}" == "DESKTOP_APP_DISABLE_GTK_INTEGRATION" ]; then
+              DEFINE="$DEFINE -D DESKTOP_APP_DISABLE_WEBKITGTK=ON"
             fi
             echo Define from matrix: $DEFINE
             echo "ARTIFACT_NAME=Telegram_${{ matrix.defines }}" >> $GITHUB_ENV
