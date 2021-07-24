@@ -205,8 +205,6 @@ void SetupForkContent(
 	not_null<Ui::VerticalLayout*> container,
 	SessionController controller) {
 
-	const auto session = &controller->session();
-
 	auto wrap = object_ptr<Ui::VerticalLayout>(container);
 	const auto inner = wrap.data();
 	container->add(object_ptr<Ui::OverrideMargins>(
