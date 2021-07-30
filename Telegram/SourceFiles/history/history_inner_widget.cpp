@@ -1867,11 +1867,12 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				[text = link->copyToClipboardText()] {
 					QGuiApplication::clipboard()->setText(text);
 				});
-			if (Core::App().settings().askUriScheme()) {
+			if (Core::App().settings().fork().askUriScheme()) {
 				_menu->addAction(
 					tr::lng_context_open_uri_link(tr::now),
 					[text = link->copyToClipboardText()] {
-						const auto s = Core::App().settings().uriScheme();
+						const auto s =
+							Core::App().settings().fork().uriScheme();
 						QDesktopServices::openUrl(s + text);
 					});
 			}
@@ -1973,9 +1974,10 @@ void HistoryInner::copySelectedText() {
 }
 
 void HistoryInner::addSearchAction() {
-	if (Core::App().settings().searchEngine()) {
+	if (Core::App().settings().fork().searchEngine()) {
 		_menu->addAction(tr::lng_context_search_selected(tr::now), [=] {
-			QString url = Core::App().settings().searchEngineUrl();
+			auto url =
+				Core::App().settings().fork().searchEngineUrl();
 			QDesktopServices::openUrl(url.replace(qsl("%q"), this->getSelectedText().rich.text));
 		});
 	}

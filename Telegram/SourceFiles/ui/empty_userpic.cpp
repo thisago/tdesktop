@@ -225,7 +225,7 @@ void EmptyUserpic::paint(
 		int outerWidth,
 		int size) const {
 	paint(p, x, y, outerWidth, size, [&p, x, y, size] {
-		if (Core::App().settings().squareUserpics()) {
+		if (Core::App().settings().fork().squareUserpics()) {
 			p.drawRect(x, y, size, size);
 		} else {
 			p.drawEllipse(x, y, size, size);
@@ -281,7 +281,7 @@ void EmptyUserpic::PaintSavedMessages(
 	p.setBrush(bg);
 	p.setPen(Qt::NoPen);
 
-	if (Core::App().settings().squareUserpics()) {
+	if (Core::App().settings().fork().squareUserpics()) {
 		p.drawRect(x, y, size, size);
 	} else {
 		p.drawEllipse(x, y, size, size);

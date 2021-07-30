@@ -401,9 +401,10 @@ const QPixmap &Image::pixCircled(int w, int h) const {
 		w *= cIntRetinaFactor();
 		h *= cIntRetinaFactor();
 	}
-	auto options = Option::Smooth | (Core::App().settings().squareUserpics()
-		? Option::None
-		: Option::Circled);
+	auto options = Option::Smooth
+		| (Core::App().settings().fork().squareUserpics()
+			? Option::None
+			: Option::Circled);
 	auto k = PixKey(w, h, options);
 	auto i = _cache.find(k);
 	if (i == _cache.cend()) {

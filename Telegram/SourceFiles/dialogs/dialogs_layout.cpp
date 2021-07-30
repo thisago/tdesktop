@@ -452,7 +452,7 @@ void paintRow(
 		sendStateIcon->paint(p, rectForName.topLeft() + QPoint(rectForName.width(), 0), fullWidth);
 	}
 	if (from) {
-		if (from->isUser() && Core::App().settings().lastSeenInDialogs()) {
+		if (from->isUser() && Core::App().settings().fork().lastSeenInDialogs()) {
 			auto lastSeen = Data::OnlineText(from->asUser(), base::unixtime::now());
 			static QSet<QString> ignoredStrings {
 				tr::lng_status_recently(tr::now),

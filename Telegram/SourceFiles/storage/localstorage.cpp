@@ -453,11 +453,13 @@ void writeSettings() {
 	}
 	const auto configSerialized = LookupFallbackConfig().serialize();
 	const auto applicationSettings = Core::App().settings().serialize();
+	const auto forkSettings = Core::App().settings().fork().serialize();
 
 	quint32 size = 9 * (sizeof(quint32) + sizeof(qint32));
 	size += sizeof(quint32) + Serialize::bytearraySize(configSerialized);
 	size += sizeof(quint32) + Serialize::bytearraySize(applicationSettings);
 	size += sizeof(quint32) + Serialize::stringSize(cDialogLastPath());
+	size += sizeof(quint32) + Serialize::bytearraySize(forkSettings);
 
 	// Theme keys and night mode.
 	size += sizeof(quint32) + sizeof(quint64) * 2 + sizeof(quint32);
@@ -501,6 +503,7 @@ void writeSettings() {
 	if (_languagesKey) {
 		data.stream << quint32(dbiLanguagesKey) << quint64(_languagesKey);
 	}
+	data.stream << quint32(dbiForkgramSettings) << forkSettings;
 
 	settings.writeEncrypted(data, SettingsKey);
 }

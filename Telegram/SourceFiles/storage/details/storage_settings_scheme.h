@@ -165,6 +165,7 @@ enum {
 	dbiDialogsFiltersOld = 0x5f,
 	dbiFallbackProductionConfig = 0x60,
 	dbiBackgroundKey = 0x61,
+	dbiForkgramSettings = 0x62,
 
 	dbiEncryptedWithSalt = 333,
 	dbiEncrypted = 444,

@@ -315,6 +315,8 @@ PRIVATE
     core/core_cloud_password.h
     core/core_settings.cpp
     core/core_settings.h
+    core/fork_settings.cpp
+    core/fork_settings.h
     core/core_settings_proxy.cpp
     core/core_settings_proxy.h
     core/crash_report_window.cpp

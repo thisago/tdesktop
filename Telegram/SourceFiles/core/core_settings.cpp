@@ -97,7 +97,6 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint32) * 9
 		+ Serialize::stringSize(_callOutputDeviceId)
 		+ Serialize::stringSize(_callInputDeviceId)
-		+ Serialize::stringSize(_uriScheme) + Serialize::stringSize(_searchEngineUrl)
 		+ sizeof(qint32) * 5;
 	for (const auto &[key, value] : _soundOverrides) {
 		size += Serialize::stringSize(key) + Serialize::stringSize(value);
@@ -171,17 +170,17 @@ QByteArray Settings::serialize() const {
 			<< qint32(_replaceEmoji.current() ? 1 : 0)
 			<< qint32(_suggestEmoji ? 1 : 0)
 			// Fork Settings.
-			<< qint32(_squareUserpics ? 1 : 0)
-			<< qint32(_audioFade ? 1 : 0)
-			<< qint32(_askUriScheme ? 1 : 0)
-			<< qint32(_lastSeenInDialogs ? 1 : 0)
-			<< _uriScheme
-			<< _searchEngineUrl
-			<< qint32(_searchEngine ? 1 : 0)
-			<< qint32(_allRecentStickers ? 1 : 0)
-			<< qint32(_customStickerSize)
-			<< qint32(_useBlackTrayIcon ? 1 : 0)
-			<< qint32(_useOriginalTrayIcon ? 1 : 0)
+			<< qint32(0)
+			<< qint32(0)
+			<< qint32(0)
+			<< qint32(0)
+			<< QString()
+			<< QString()
+			<< qint32(0)
+			<< qint32(0)
+			<< qint32(0)
+			<< qint32(0)
+			<< qint32(0)
 			//
 			<< qint32(_suggestStickersByEmoji ? 1 : 0)
 			<< qint32(_spellcheckerEnabled.current() ? 1 : 0)
@@ -244,17 +243,18 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	QDataStream stream(serialized);
 	stream.setVersion(QDataStream::Qt_5_1);
 
-	qint32 squareUserpics = _squareUserpics;
-	qint32 audioFade = _audioFade;
-	qint32 askUriScheme = _askUriScheme;
-	qint32 lastSeenInDialogs = _lastSeenInDialogs;
-	QString uriScheme = _uriScheme;
-	QString searchEngineUrl = _searchEngineUrl;
-	qint32 searchEngine = _searchEngine;
-	qint32 allRecentStickers = _allRecentStickers;
-	qint32 customStickerSize = _customStickerSize;
-	qint32 useBlackTrayIcon = _useBlackTrayIcon;
-	qint32 useOriginalTrayIcon = _useOriginalTrayIcon;
+	// Old.
+	qint32 squareUserpics = 0;
+	qint32 audioFade = 0;
+	qint32 askUriScheme = 0;
+	qint32 lastSeenInDialogs = 0;
+	QString uriScheme = {};
+	QString searchEngineUrl = {};
+	qint32 searchEngine = 0;
+	qint32 allRecentStickers = 0;
+	qint32 customStickerSize = 0;
+	qint32 useBlackTrayIcon = 0;
+	qint32 useOriginalTrayIcon = 0;
 
 	QByteArray themesAccentColors;
 	qint32 adaptiveForWide = _adaptiveForWide.current() ? 1 : 0;
@@ -370,7 +370,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 			>> largeEmoji
 			>> replaceEmoji
 			>> suggestEmoji
-			// Fork Settings.
+			// Old Fork Settings.
 			>> squareUserpics
 			>> audioFade
 			>> askUriScheme
@@ -563,17 +563,18 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	_autoDownloadDictionaries = (autoDownloadDictionaries == 1);
 	_mainMenuAccountsShown = (mainMenuAccountsShown == 1);
 
-	_squareUserpics = (squareUserpics == 1);
-	_audioFade = (audioFade == 1);
-	_askUriScheme = (askUriScheme == 1);
-	_lastSeenInDialogs = (lastSeenInDialogs == 1);
-	_uriScheme = uriScheme;
-	_searchEngineUrl = searchEngineUrl;
-	_searchEngine = (searchEngine == 1);
-	_allRecentStickers = (allRecentStickers == 1);
-	_customStickerSize = customStickerSize;
-	_useBlackTrayIcon = (useBlackTrayIcon == 1);
-	_useOriginalTrayIcon = (useOriginalTrayIcon == 1);
+	// Old.
+	_forkSettings.setSquareUserpics(squareUserpics == 1);
+	_forkSettings.setAudioFade(audioFade == 1);
+	_forkSettings.setAskUriScheme(askUriScheme == 1);
+	_forkSettings.setLastSeenInDialogs(lastSeenInDialogs == 1);
+	_forkSettings.setUriScheme(uriScheme);
+	_forkSettings.setSearchEngineUrl(searchEngineUrl);
+	_forkSettings.setSearchEngine(searchEngine == 1);
+	_forkSettings.setAllRecentStickers(allRecentStickers == 1);
+	_forkSettings.setCustomStickerSize(customStickerSize);
+	_forkSettings.setUseBlackTrayIcon(useBlackTrayIcon == 1);
+	_forkSettings.setUseOriginalTrayIcon(useOriginalTrayIcon == 1);
 
 	_tabbedSelectorSectionEnabled = (tabbedSelectorSectionEnabled == 1);
 	auto uncheckedColumn = static_cast<Window::Column>(floatPlayerColumn);
@@ -818,15 +819,7 @@ void Settings::setLegacyEmojiVariants(QMap<QString, int> data) {
 }
 
 void Settings::resetOnLastLogout() {
-	_squareUserpics = false;
-	_audioFade = true;
-	_askUriScheme = false;
-	_uriScheme = qsl("");
-	_lastSeenInDialogs = false;
-	_searchEngineUrl = qsl("https://dgg.gg/%q");
-	_searchEngine = false;
-	_allRecentStickers = true;
-	_customStickerSize = 256;
+	_forkSettings.resetOnLastLogout();
 
 	_adaptiveForWide = true;
 	_moderateModeEnabled = false;

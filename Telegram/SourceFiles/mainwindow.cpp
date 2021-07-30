@@ -96,8 +96,9 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 
 	////
 	{
-		const auto isSquare = Core::App().settings().squareUserpics();
-		const auto isOriginal = Core::App().settings().useOriginalTrayIcon();
+		const auto isSquare = Core::App().settings().fork().squareUserpics();
+		const auto isOriginal =
+			Core::App().settings().fork().useOriginalTrayIcon();
 		const auto getIconOr = [&](auto l) {
 			return isOriginal
 				? l
@@ -972,7 +973,7 @@ QImage MainWindow::iconWithCounter(int size, int count, style::color bg, style::
 	QImage img(smallIcon ? ((size == 16) ? iconbig16 : (size == 32 ? iconbig32 : iconbig64)) : ((size == 16) ? icon16 : (size == 32 ? icon32 : icon64)));
 	if (const auto controller = sessionController()) {
 		if (controller->session().supportMode()
-			|| Core::App().settings().useBlackTrayIcon()) {
+			|| Core::App().settings().fork().useBlackTrayIcon()) {
 			Window::ConvertIconToBlack(img);
 		}
 	}

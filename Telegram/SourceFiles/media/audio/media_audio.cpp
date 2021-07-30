@@ -1548,7 +1548,7 @@ void Fader::onVideoVolumeChanged() {
 }
 
 crl::time Fader::getFadeDuration() {
-	if (!Core::App().settings().audioFade()) {
+	if (!Core::App().settings().fork().audioFade()) {
 		return crl::time(0);
 	}
 	return kFadeDuration;

@@ -392,7 +392,7 @@ void RoundImageCheckbox::paint(Painter &p, int x, int y, int outerWidth) {
 		pen.setWidth(_st.selectWidth);
 		p.setPen(pen);
 		const auto rect = style::rtlrect(x, y, _st.imageRadius * 2, _st.imageRadius * 2, outerWidth);
-		Core::App().settings().squareUserpics() ? p.drawRect(rect) : p.drawEllipse(rect);
+		Core::App().settings().fork().squareUserpics() ? p.drawRect(rect) : p.drawEllipse(rect);
 		p.setOpacity(1.);
 	}
 	if (_st.check.size > 0) {

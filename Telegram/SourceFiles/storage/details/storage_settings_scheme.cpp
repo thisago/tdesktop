@@ -91,6 +91,14 @@ bool ReadSetting(
 		Core::App().settings().addFromSerialized(serialized);
 	} break;
 
+	case dbiForkgramSettings: {
+		auto serialized = QByteArray();
+		stream >> serialized;
+		if (!CheckStreamStatus(stream)) return false;
+
+		Core::App().settings().fork().addFromSerialized(serialized);
+	} break;
+
 	case dbiChatSizeMaxOld: {
 		qint32 maxSize;
 		stream >> maxSize;

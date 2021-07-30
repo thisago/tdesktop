@@ -131,9 +131,9 @@ protected:
 
 QString SearchEngineBox::getOrSetGlobal(QString value) {
 	if (value.isEmpty()) {
-		return Core::App().settings().searchEngineUrl();
+		return Core::App().settings().fork().searchEngineUrl();
 	}
-	Core::App().settings().setSearchEngineUrl(value);
+	Core::App().settings().fork().setSearchEngineUrl(value);
 	return QString();
 }
 
@@ -156,9 +156,9 @@ protected:
 
 QString URISchemeBox::getOrSetGlobal(QString value) {
 	if (value.isEmpty()) {
-		return Core::App().settings().uriScheme();
+		return Core::App().settings().fork().uriScheme();
 	}
-	Core::App().settings().setUriScheme(value);
+	Core::App().settings().fork().setUriScheme(value);
 	return QString();
 }
 
@@ -182,14 +182,16 @@ private:
 QString StickerSizeBox::getOrSetGlobal(QString value) {
 	if (value.isEmpty()) {
 		if (!_startSize) {
-			_startSize = Core::App().settings().customStickerSize();
-		} else if (_startSize == Core::App().settings().customStickerSize()) {
+			_startSize = Core::App().settings().fork().customStickerSize();
+		} else if (_startSize
+				== Core::App().settings().fork().customStickerSize()) {
 			return QString();
 		}
-		return QString::number(Core::App().settings().customStickerSize());
+		return QString::number(
+			Core::App().settings().fork().customStickerSize());
 	}
 	if (const auto number = value.toInt()) {
-		Core::App().settings().setCustomStickerSize(number);
+		Core::App().settings().fork().setCustomStickerSize(number);
 	}
 	return QString();
 }
@@ -264,17 +266,17 @@ void SetupForkContent(
 	//
 	addRestart(
 		tr::lng_settings_square_avatats(tr::now),
-		[] { return Core::App().settings().squareUserpics(); },
+		[] { return Core::App().settings().fork().squareUserpics(); },
 		[=](bool checked) {
-			Core::App().settings().setSquareUserpics(checked);
+			Core::App().settings().fork().setSquareUserpics(checked);
 		});
 
 	//
 	add(
 		tr::lng_settings_audio_fade(tr::now),
-		Core::App().settings().audioFade(),
+		Core::App().settings().fork().audioFade(),
 		[=](bool checked) {
-			Core::App().settings().setAudioFade(checked);
+			Core::App().settings().fork().setAudioFade(checked);
 			Core::App().saveSettingsDelayed();
 		});
 
@@ -282,7 +284,7 @@ void SetupForkContent(
 	const auto uriScheme = inner->add(
 		checkbox(
 			tr::lng_settings_uri_scheme(tr::now),
-			Core::App().settings().askUriScheme()),
+			Core::App().settings().fork().askUriScheme()),
 		st::settingsCheckboxPadding
 	);
 	uriScheme->checkedChanges(
@@ -290,7 +292,7 @@ void SetupForkContent(
 		if (checked) {
 			auto callback = [=](bool isSuccess) {
 				uriScheme->setChecked(isSuccess);
-				Core::App().settings().setAskUriScheme(checked);
+				Core::App().settings().fork().setAskUriScheme(checked);
 				Core::App().saveSettingsDelayed();
 			};
 			Ui::show(Box<URISchemeBox>(
@@ -299,7 +301,7 @@ void SetupForkContent(
 				tr::lng_settings_uri_scheme_field_label),
 			Ui::LayerOption::KeepOther);
 		} else {
-			Core::App().settings().setAskUriScheme(checked);
+			Core::App().settings().fork().setAskUriScheme(checked);
 			Core::App().saveSettingsDelayed();
 		}
 	}, uriScheme->lifetime());
@@ -307,9 +309,9 @@ void SetupForkContent(
 	//
 	add(
 		tr::lng_settings_last_seen_in_dialogs(tr::now),
-		Core::App().settings().lastSeenInDialogs(),
+		Core::App().settings().fork().lastSeenInDialogs(),
 		[=](bool checked) {
-			Core::App().settings().setLastSeenInDialogs(checked);
+			Core::App().settings().fork().setLastSeenInDialogs(checked);
 			Core::App().saveSettingsDelayed();
 		});
 
@@ -317,7 +319,7 @@ void SetupForkContent(
 	const auto searchEngine = inner->add(
 		checkbox(
 			tr::lng_settings_search_engine(tr::now),
-			Core::App().settings().searchEngine()),
+			Core::App().settings().fork().searchEngine()),
 		st::settingsCheckboxPadding
 	);
 
@@ -327,7 +329,7 @@ void SetupForkContent(
 		if (checked) {
 			auto callback = [=](bool isSuccess) {
 				searchEngine->setChecked(isSuccess);
-				Core::App().settings().setSearchEngine(checked);
+				Core::App().settings().fork().setSearchEngine(checked);
 				Core::App().saveSettingsDelayed();
 			};
 			Ui::show(Box<SearchEngineBox>(
@@ -336,7 +338,7 @@ void SetupForkContent(
 				tr::lng_settings_search_engine_field_label),
 			Ui::LayerOption::KeepOther);
 		} else {
-			Core::App().settings().setSearchEngine(checked);
+			Core::App().settings().fork().setSearchEngine(checked);
 			Core::App().saveSettingsDelayed();
 		}
 	}, searchEngine->lifetime());
@@ -345,26 +347,26 @@ void SetupForkContent(
 #ifdef Q_OS_WIN
 	add(
 		tr::lng_settings_use_black_tray_icon(tr::now),
-		Core::App().settings().useBlackTrayIcon(),
+		Core::App().settings().fork().useBlackTrayIcon(),
 		[](bool checked) {
-			Core::App().settings().setUseBlackTrayIcon(checked);
+			Core::App().settings().fork().setUseBlackTrayIcon(checked);
 			Core::App().saveSettingsDelayed();
 			Core::App().domain().notifyUnreadBadgeChanged();
 		});
 #else // !Q_OS_WIN
 	addRestart(
 		tr::lng_settings_use_black_tray_icon(tr::now),
-		[] { return Core::App().settings().useBlackTrayIcon(); },
+		[] { return Core::App().settings().fork().useBlackTrayIcon(); },
 		[](bool checked) {
-			Core::App().settings().setUseBlackTrayIcon(checked);
+			Core::App().settings().fork().setUseBlackTrayIcon(checked);
 		});
 #endif // Q_OS_WIN
 
 	addRestart(
 		tr::lng_settings_use_original_tray_icon(tr::now),
-		[] { return Core::App().settings().useOriginalTrayIcon(); },
+		[] { return Core::App().settings().fork().useOriginalTrayIcon(); },
 		[](bool checked) {
-			Core::App().settings().setUseOriginalTrayIcon(checked);
+			Core::App().settings().fork().setUseOriginalTrayIcon(checked);
 		});
 #endif // !Q_OS_LINUX
 

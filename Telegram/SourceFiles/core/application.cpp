@@ -264,7 +264,7 @@ void Application::run() {
 	startShortcuts();
 	App::initMedia();
 	startDomain();
-	style::SetSquareUserpics(_settings.squareUserpics());
+	style::SetSquareUserpics(_settings.fork().squareUserpics());
 
 	_window->widget()->show();
 
@@ -297,15 +297,15 @@ void Application::run() {
 	}, _window->lifetime());
 
 	////
-	const auto isSquare = _settings.squareUserpics();
-	const auto isOriginal = _settings.useOriginalTrayIcon();
+	const auto isSquare = _settings.fork().squareUserpics();
+	const auto isOriginal = _settings.fork().useOriginalTrayIcon();
 	auto logo = isOriginal
 		? Window::LoadLogoNoMargin()
 		: isSquare
 			? Core::App().logoSquareNoMargin()
 			: Core::App().logoForkgramNoMargin();
 
-	if (_settings.useBlackTrayIcon()) {
+	if (_settings.fork().useBlackTrayIcon()) {
 		Window::ConvertIconToBlack(logo);
 	}
 	_logoNoMargin = std::move(logo);

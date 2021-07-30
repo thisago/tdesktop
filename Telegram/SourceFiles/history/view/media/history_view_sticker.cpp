@@ -97,7 +97,7 @@ bool Sticker::isEmojiSticker() const {
 }
 
 void Sticker::initSize() {
-	const auto s = Core::App().settings().customStickerSize();
+	const auto s = Core::App().settings().fork().customStickerSize();
 	const auto stickerSize = (s == 256)
 		? st::maxStickerSize
 		: int(cScale() / 100.0 * s);
@@ -146,7 +146,7 @@ QSize Sticker::GetAnimatedEmojiSize(not_null<Main::Session*> session) {
 QSize Sticker::GetAnimatedEmojiSize(
 		not_null<Main::Session*> session,
 		QSize documentSize) {
-	const auto s = Core::App().settings().customStickerSize();
+	const auto s = Core::App().settings().fork().customStickerSize();
 	const auto stickerSize = (s == 256)
 		? st::maxStickerSize
 		: int(cScale() / 100.0 * s);

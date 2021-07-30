@@ -247,7 +247,7 @@ void Folder::paintUserpic(
 	p.setBrush(overrideBg ? *overrideBg : st::historyPeerArchiveUserpicBg);
 	{
 		PainterHighQualityEnabler hq(p);
-		Core::App().settings().squareUserpics()
+		Core::App().settings().fork().squareUserpics()
 			? p.drawRect(x, y, size, size)
 			: p.drawEllipse(x, y, size, size);
 	}
