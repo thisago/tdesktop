@@ -112,8 +112,7 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint64)
 		+ sizeof(qint32) * 2
 		+ Serialize::bytearraySize(windowPosition)
-		+ sizeof(qint32)
-		+ Serialize::bytearraySize(_photoEditorBrush);
+		+ sizeof(qint32);
 	for (const auto &[id, rating] : recentEmojiPreloadData) {
 		size += Serialize::stringSize(id) + sizeof(quint16);
 	}
@@ -123,7 +122,9 @@ QByteArray Settings::serialize() const {
 	}
 	size += sizeof(qint32) * 3
 		+ Serialize::bytearraySize(proxy)
-		+ sizeof(qint32) * 2;
+		+ sizeof(qint32) * 2
+		+ Serialize::bytearraySize(_photoEditorBrush)
+		+ sizeof(qint32);
 
 	auto result = QByteArray();
 	result.reserve(size);
@@ -225,12 +226,13 @@ QByteArray Settings::serialize() const {
 		}
 		stream
 			<< qint32(0) // Old Disable OpenGL
-			<< qint32(_groupCallNoiseSuppression ? 1 : 0)
+			<< qint32(0) // Old Noise Suppression
 			<< qint32(_workMode.current())
 			<< proxy
 			<< qint32(_hiddenGroupCallTooltips.value())
 			<< qint32(_disableOpenGL ? 1 : 0)
-			<< _photoEditorBrush;
+			<< _photoEditorBrush
+			<< qint32(_groupCallNoiseSuppression ? 1 : 0);
 	}
 	return result;
 }
@@ -471,7 +473,8 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 		stream >> disableOpenGLOld;
 	}
 	if (!stream.atEnd()) {
-		stream >> groupCallNoiseSuppression;
+		qint32 groupCallNoiseSuppressionOld;
+		stream >> groupCallNoiseSuppressionOld;
 	}
 	if (!stream.atEnd()) {
 		stream >> workMode;
@@ -487,6 +490,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	}
 	if (!stream.atEnd()) {
 		stream >> photoEditorBrush;
+	}
+	if (!stream.atEnd()) {
+		stream >> groupCallNoiseSuppression;
 	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
@@ -857,7 +863,7 @@ void Settings::resetOnLastLogout() {
 	_groupCallPushToTalkShortcut = QByteArray();
 	_groupCallPushToTalkDelay = 20;
 
-	_groupCallNoiseSuppression = true;
+	_groupCallNoiseSuppression = false;
 
 	//_themesAccentColors = Window::Theme::AccentColors();
 
