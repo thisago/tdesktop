@@ -39,6 +39,7 @@ include(cmake/td_lang.cmake)
 include(cmake/td_scheme.cmake)
 include(cmake/td_ui.cmake)
 include(cmake/generate_appdata_changelog.cmake)
+include(cmake/td_forkgram.cmake)
 
 if (WIN32)
     include(cmake/generate_midl.cmake)
@@ -57,6 +58,7 @@ PRIVATE
     tdesktop::td_lang
     tdesktop::td_scheme
     tdesktop::td_ui
+    tdesktop::td_forkgram
     desktop-app::lib_webrtc
     desktop-app::lib_base
     desktop-app::lib_crl
@@ -506,6 +508,8 @@ PRIVATE
     export/view/export_view_settings.h
     export/view/export_view_top_bar.cpp
     export/view/export_view_top_bar.h
+    forkgram/uri_menu.cpp
+    forkgram/uri_menu.h
     history/admin_log/history_admin_log_filter.cpp
     history/admin_log/history_admin_log_filter.h
     history/admin_log/history_admin_log_inner.cpp

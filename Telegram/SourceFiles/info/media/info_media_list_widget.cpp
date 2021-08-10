@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "info/media/info_media_list_widget.h"
 
+#include "forkgram/uri_menu.h"
+
 #include "info/info_controller.h"
 #include "overview/overview_layout.h"
 #include "layout/layout_mosaic.h"
@@ -1582,6 +1584,9 @@ void ListWidget::showContextMenu(
 				[text = link->copyToClipboardText()] {
 					QGuiApplication::clipboard()->setText(text);
 				});
+			Forkgram::FillUrlWithCustomUri(
+				_contextMenu.get(),
+				link->copyToClipboardText());
 		}
 	}
 	if (overSelected == SelectionState::OverSelectedItems) {

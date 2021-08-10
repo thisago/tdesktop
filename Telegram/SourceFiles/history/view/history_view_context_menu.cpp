@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_context_menu.h"
 
+#include "forkgram/uri_menu.h"
+
 #include "api/api_attached_stickers.h"
 #include "api/api_editing.h"
 #include "api/api_toggling_media.h" // Api::ToggleFavedSticker
@@ -887,6 +889,8 @@ void AddCopyLinkAction(
 	menu->addAction(
 		action,
 		[=] { QGuiApplication::clipboard()->setText(text); });
+
+	Forkgram::FillUrlWithCustomUri(menu, text);
 }
 
 } // namespace
