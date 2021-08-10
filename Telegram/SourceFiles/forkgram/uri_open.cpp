@@ -21,6 +21,7 @@ Author: 23rd.
 
 #else // !Q_OS_WIN
 #include <QDesktopServices>
+#include <QUrl>
 #endif
 
 // Since Qt 5.15 removes the second colon from "customUri://https://gnu.org"
