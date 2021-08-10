@@ -333,6 +333,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_context_open_uri_link" = "Open Link with URI Scheme";
 
 "lng_context_search_selected" = "Search Selected Text";
+
+"lng_info_id_label" = "ID";
+"lng_profile_copy_id" = "Copy ID";
 // 
 
 "lng_settings_section_notify" = "Notifications";

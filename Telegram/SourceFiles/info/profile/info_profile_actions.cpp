@@ -59,6 +59,18 @@ namespace Info {
 namespace Profile {
 namespace {
 
+rpl::producer<TextWithEntities> IDValue(not_null<PeerData*> peer) {
+	const auto peerId = peer->id;
+	const auto id = peer->isUser()
+		? peerToUser(peerId).bare
+		: peer->isChat()
+		? peerToChat(peerId).bare
+		: peer->isChannel()
+		? peerToChannel(peerId).bare
+		: 0;
+	return rpl::single(Ui::Text::WithEntities(QString::number(id)));
+}
+
 object_ptr<Ui::RpWidget> CreateSkipWidget(
 		not_null<Ui::RpWidget*> parent) {
 	return Ui::CreateSkipWidget(parent, st::infoProfileSkip);
@@ -338,6 +350,12 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 
 		addInfoLine(tr::lng_info_about_label(), AboutValue(_peer));
 	}
+	// ID
+	addInfoOneLine(
+		tr::lng_info_id_label(),
+		IDValue(_peer),
+		tr::lng_profile_copy_id(tr::now));
+	//
 	if (!_peer->isSelf()) {
 		// No notifications toggle for Self => no separator.
 		result->add(object_ptr<Ui::SlideWrap<>>(
