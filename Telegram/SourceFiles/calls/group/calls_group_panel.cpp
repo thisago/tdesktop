@@ -48,7 +48,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/unixtime.h"
 #include "base/qt_signal_producer.h"
 #include "base/timer_rpl.h"
-#include "app.h"
 #include "apiwrap.h" // api().kickParticipant.
 #include "webrtc/webrtc_video_track.h"
 #include "webrtc/webrtc_media_devices.h" // UniqueDesktopCaptureSource.
@@ -268,11 +267,16 @@ void Panel::initWindow() {
 			0,
 			widget()->width(),
 			st::groupCallMembersTop);
-		return (titleRect.contains(widgetPoint)
+		const auto moveable = (titleRect.contains(widgetPoint)
 			&& (!_menuToggle || !_menuToggle->geometry().contains(widgetPoint))
 			&& (!_menu || !_menu->geometry().contains(widgetPoint))
 			&& (!_recordingMark || !_recordingMark->geometry().contains(widgetPoint))
-			&& (!_joinAsToggle || !_joinAsToggle->geometry().contains(widgetPoint)))
+			&& (!_joinAsToggle || !_joinAsToggle->geometry().contains(widgetPoint)));
+		if (!moveable) {
+			return (Flag::None | Flag(0));
+		}
+		const auto shown = _layerBg->topShownLayer();
+		return (!shown || !shown->geometry().contains(widgetPoint))
 			? (Flag::Move | Flag::Maximize)
 			: Flag::None;
 	});

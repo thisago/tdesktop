@@ -88,7 +88,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/bot_keyboard.h"
 #include "chat_helpers/message_field.h"
 #include "chat_helpers/send_context_menu.h"
-#include "platform/platform_specific.h"
 #include "mtproto/mtproto_config.h"
 #include "lang/lang_keys.h"
 #include "mainwidget.h"
@@ -175,7 +174,7 @@ const auto kPsaAboutPrefix = "cloud_lng_about_psa_";
 HistoryWidget::HistoryWidget(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller)
-: Window::AbstractSectionWidget(parent, controller)
+: Window::AbstractSectionWidget(parent, controller, PaintedBackground::Section)
 , _api(&controller->session().mtp())
 , _updateEditTimeLeftDisplay([=] { updateField(); })
 , _fieldBarCancel(this, st::historyReplyCancel)
@@ -327,6 +326,9 @@ HistoryWidget::HistoryWidget(
 
 	_historyDown->installEventFilter(this);
 	_unreadMentions->installEventFilter(this);
+	SendMenu::SetupUnreadMentionsMenu(_unreadMentions.data(), [=] {
+		return _history ? _history->peer.get() : nullptr;
+	});
 
 	InitMessageField(controller, _field);
 
@@ -448,6 +450,11 @@ HistoryWidget::HistoryWidget(
 			updateHistoryGeometry();
 			update();
 		}
+	}, lifetime());
+
+	controller->repaintBackgroundRequests(
+	) | rpl::start_with_next([=] {
+		update();
 	}, lifetime());
 
 	session().data().newItemAdded(
@@ -3553,15 +3560,12 @@ void HistoryWidget::chooseAttach() {
 		}
 
 		if (!result.remoteContent.isEmpty()) {
-			auto animated = false;
-			auto image = App::readImage(
-				result.remoteContent,
-				nullptr,
-				false,
-				&animated);
-			if (!image.isNull() && !animated) {
+			auto read = Images::Read({
+				.content = result.remoteContent,
+			});
+			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
-					std::move(image),
+					std::move(read.image),
 					std::move(result.remoteContent));
 			} else {
 				uploadFile(result.remoteContent, SendMediaType::File);
@@ -4507,10 +4511,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetImageFromClipboard();
-		if (image.isNull()) {
-			image = qvariant_cast<QImage>(data->imageData());
-		}
+		auto image = qvariant_cast<QImage>(data->imageData());
 		if (!image.isNull()) {
 			confirmSendingFiles(
 				std::move(image),
@@ -4941,6 +4942,9 @@ void HistoryWidget::startItemRevealAnimations() {
 							1.,
 							HistoryView::ListWidget::kItemRevealDuration,
 							anim::easeOutCirc);
+						if (item->out()) {
+							controller()->rotateComplexGradientBackground();
+						}
 					}
 				}
 			}
@@ -6276,11 +6280,7 @@ void HistoryWidget::updatePreview() {
 				st::msgNameStyle,
 				tr::lng_preview_loading(tr::now),
 				Ui::NameTextOptions());
-#ifndef OS_MAC_OLD
 			auto linkText = _previewLinks.splitRef(' ').at(0).toString();
-#else // OS_MAC_OLD
-			auto linkText = _previewLinks.split(' ').at(0);
-#endif // OS_MAC_OLD
 			_previewDescription.setText(
 				st::messageTextStyle,
 				TextUtilities::Clean(linkText),
@@ -6990,6 +6990,10 @@ void HistoryWidget::synteticScrollToY(int y) {
 
 HistoryWidget::~HistoryWidget() {
 	if (_history) {
+		// Saving a draft on account switching.
+		saveFieldToHistoryLocalDraft();
+		session().api().saveDraftToCloudDelayed(_history);
+
 		clearAllLoadRequests();
 	}
 	setTabbedPanel(nullptr);

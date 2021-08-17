@@ -45,7 +45,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_specific.h"
 #include "base/platform/base_platform_info.h"
 #include "window/main_window.h"
-#include "app.h"
 #include "webrtc/webrtc_video_track.h"
 #include "webrtc/webrtc_media_devices.h"
 #include "styles/style_calls.h"
@@ -77,6 +76,9 @@ Panel::Panel(not_null<Call*> call)
 , _mute(widget(), st::callMicrophoneMute, &st::callMicrophoneUnmute)
 , _name(widget(), st::callName)
 , _status(widget(), st::callStatus) {
+	_layerBg->setStyleOverrides(&st::groupCallBox, &st::groupCallLayerBox);
+	_layerBg->setHideByBackgroundClick(true);
+
 	_decline->setDuration(st::callPanelDuration);
 	_decline->entity()->setText(tr::lng_call_decline());
 	_cancel->setDuration(st::callPanelDuration);
@@ -158,9 +160,13 @@ void Panel::initWindow() {
 				_answerHangupRedial->height()).contains(widgetPoint)
 			|| (!_outgoingPreviewInBody
 				&& _outgoingVideoBubble->geometry().contains(widgetPoint));
-		return inControls
-			? Flag::None
-			: (Flag::Move | Flag::FullScreen);
+		if (inControls) {
+			return Flag::None | Flag(0);
+		}
+		const auto shown = _layerBg->topShownLayer();
+		return (!shown || !shown->geometry().contains(widgetPoint))
+			? (Flag::Move | Flag::FullScreen)
+			: Flag::None;
 	});
 
 	// Don't do that, it looks awful :(
