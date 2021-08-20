@@ -158,9 +158,12 @@ void SendExistingMediaFromItem(
 		message.action.options.silent = toSend.silent;
 		message.action.replyTo = ReplyToIdFromDraft(peer);
 		if (const auto document = item->media()->document()) {
-			Api::SendExistingDocument(std::move(message), document);
+			Api::SendExistingDocument(
+				std::move(message),
+				document,
+				item->fullId());
 		} else if (const auto photo = item->media()->photo()) {
-			Api::SendExistingPhoto(std::move(message), photo);
+			Api::SendExistingPhoto(std::move(message), photo, item->fullId());
 		}
 	}
 }

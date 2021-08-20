@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "data/data_file_origin.h"
+
 class History;
 class PhotoData;
 class DocumentData;
@@ -24,6 +26,16 @@ void SendExistingDocument(
 void SendExistingPhoto(
 	Api::MessageToSend &&message,
 	not_null<PhotoData*> photo);
+
+void SendExistingDocument(
+	Api::MessageToSend &&message,
+	not_null<DocumentData*> document,
+	Data::FileOrigin origin);
+
+void SendExistingPhoto(
+	Api::MessageToSend &&message,
+	not_null<PhotoData*> photo,
+	Data::FileOrigin origin);
 
 bool SendDice(Api::MessageToSend &message);
 

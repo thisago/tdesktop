@@ -176,6 +176,45 @@ void SendExistingMedia(
 
 void SendExistingDocument(
 		Api::MessageToSend &&message,
+		not_null<DocumentData*> document,
+		Data::FileOrigin origin) {
+	const auto inputMedia = [=] {
+		return MTP_inputMediaDocument(
+			MTP_flags(0),
+			document->mtpInput(),
+			MTPint(), // ttl_seconds
+			MTPstring()); // query
+	};
+	SendExistingMedia(
+		std::move(message),
+		document,
+		inputMedia,
+		origin);
+
+	if (document->sticker()) {
+		document->owner().stickers().incrementSticker(document);
+	}
+}
+
+void SendExistingPhoto(
+		Api::MessageToSend &&message,
+		not_null<PhotoData*> photo,
+		Data::FileOrigin origin) {
+	const auto inputMedia = [=] {
+		return MTP_inputMediaPhoto(
+			MTP_flags(0),
+			photo->mtpInput(),
+			MTPint());
+	};
+	SendExistingMedia(
+		std::move(message),
+		photo,
+		inputMedia,
+		origin);
+}
+
+void SendExistingDocument(
+		Api::MessageToSend &&message,
 		not_null<DocumentData*> document) {
 	const auto inputMedia = [=] {
 		return MTP_inputMediaDocument(

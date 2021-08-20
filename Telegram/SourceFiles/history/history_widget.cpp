@@ -4942,7 +4942,7 @@ void HistoryWidget::startItemRevealAnimations() {
 							1.,
 							HistoryView::ListWidget::kItemRevealDuration,
 							anim::easeOutCirc);
-						if (item->out()) {
+						if (item->out() || _history->peer->isSelf()) {
 							controller()->rotateComplexGradientBackground();
 						}
 					}
