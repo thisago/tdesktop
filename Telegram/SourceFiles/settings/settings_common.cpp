@@ -212,8 +212,8 @@ void FillMenu(
 			tr::lng_settings_bg_theme_create(tr::now),
 			[=] { window->show(Box(Window::Theme::CreateBox, window)); });
 	} else {
-		const auto &list = Core::App().domain().accounts();
 #ifdef FORKGRAM_LIMIT_ACCOUNTS
+		const auto &list = Core::App().domain().accounts();
 		if (list.size() < ::Main::Domain::kMaxAccounts) {
 #endif // FORKGRAM_LIMIT_ACCOUNTS
 			addAction(tr::lng_menu_add_account(tr::now), [=] {
