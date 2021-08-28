@@ -213,11 +213,15 @@ void FillMenu(
 			[=] { window->show(Box(Window::Theme::CreateBox, window)); });
 	} else {
 		const auto &list = Core::App().domain().accounts();
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 		if (list.size() < ::Main::Domain::kMaxAccounts) {
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 			addAction(tr::lng_menu_add_account(tr::now), [=] {
 				Core::App().domain().addActivated(MTP::Environment{});
 			});
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 		}
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 		if (!controller->session().supportMode()) {
 			addAction(
 				tr::lng_settings_information(tr::now),

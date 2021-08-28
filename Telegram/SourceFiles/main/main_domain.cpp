@@ -236,7 +236,9 @@ void Domain::scheduleUpdateUnreadBadge() {
 
 not_null<Main::Account*> Domain::add(MTP::Environment environment) {
 	Expects(started());
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 	Expects(_accounts.size() < kMaxAccounts);
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 
 	static const auto cloneConfig = [](const MTP::Config &config) {
 		return std::make_unique<MTP::Config>(config);
@@ -283,6 +285,7 @@ not_null<Main::Account*> Domain::add(MTP::Environment environment) {
 }
 
 void Domain::addActivated(MTP::Environment environment) {
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 	if (accounts().size() < Main::Domain::kMaxAccounts) {
 		activate(add(environment));
 	} else {
@@ -294,6 +297,9 @@ void Domain::addActivated(MTP::Environment environment) {
 			}
 		}
 	}
+#else
+	activate(add(environment));
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 }
 
 void Domain::watchSession(not_null<Account*> account) {

@@ -818,7 +818,11 @@ void MainMenu::rebuildAccounts() {
 	inner->resizeToWidth(_accounts->width());
 
 	_addAccount->toggle(
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 		(count < Main::Domain::kMaxAccounts),
+#else
+		true,
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 		anim::type::instant);
 }
 

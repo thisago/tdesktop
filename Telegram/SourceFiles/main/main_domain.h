@@ -30,7 +30,9 @@ public:
 		std::unique_ptr<Account> account;
 	};
 
+#ifdef FORKGRAM_LIMIT_ACCOUNTS
 	static constexpr auto kMaxAccounts = 3;
+#endif // FORKGRAM_LIMIT_ACCOUNTS
 
 	explicit Domain(const QString &dataName);
 	~Domain();
