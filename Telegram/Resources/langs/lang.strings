@@ -1238,6 +1238,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_action_proximity_reached" = "{from} is now within {distance} from {user}";
 "lng_action_proximity_reached_you" = "{from} is now within {distance} from you";
 "lng_action_you_proximity_reached" = "You are now within {distance} from {user}";
+"lng_action_you_theme_changed" = "You changed chat theme to {emoji}";
+"lng_action_theme_changed" = "{from} changed chat theme to {emoji}";
+"lng_action_theme_changed_channel" = "Channel theme changed to {emoji}";
+"lng_action_you_theme_disabled" = "You disabled chat theme";
+"lng_action_theme_disabled" = "{from} disabled chat theme";
+"lng_action_theme_disabled_channel" = "Channel theme disabled";
 "lng_action_proximity_distance_m#one" = "{count} meter";
 "lng_action_proximity_distance_m#other" = "{count} metres";
 "lng_action_proximity_distance_km#one" = "{count} km";
@@ -1638,6 +1644,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_user_action_upload_photo" = "{user} is sending a photo";
 "lng_send_action_upload_file" = "sending a file";
 "lng_user_action_upload_file" = "{user} is sending a file";
+"lng_send_action_choose_sticker" = "choosing a sticker";
+"lng_user_action_choose_sticker" = "{user} is choosing a sticker";
 "lng_unread_bar#one" = "{count} unread message";
 "lng_unread_bar#other" = "{count} unread messages";
 "lng_unread_bar_some" = "Unread messages";
@@ -2136,8 +2144,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_group_call_ptt_delay" = "Push to Talk release delay: {delay}";
 "lng_group_call_share" = "Share Invite Link";
 "lng_group_call_noise_suppression" = "Enable Noise Suppression";
-"lng_group_call_limit#one" = "Video is only available\nfor the first {count} member";
-"lng_group_call_limit#other" = "Video is only available\nfor the first {count} members";
 "lng_group_call_over_limit#one" = "The voice chat is over {count} member.\nNew participants only have access to audio stream.";
 "lng_group_call_over_limit#other" = "The voice chat is over {count} members.\nNew participants only have access to audio stream.";
 "lng_group_call_video_paused" = "Video is paused";

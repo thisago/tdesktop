@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_chat_filters.h"
 #include "data/data_scheduled_messages.h"
+#include "data/data_send_action.h"
 #include "data/data_folder.h"
 #include "data/data_photo.h"
 #include "data/data_channel.h"
@@ -458,7 +459,7 @@ void History::unpinAllMessages() {
 		Storage::SharedMediaRemoveAll(
 			peer->id,
 			Storage::SharedMediaType::Pinned));
-	peer->setHasPinnedMessages(false);
+	setHasPinnedMessages(false);
 	for (const auto &message : _messages) {
 		if (message->isPinned()) {
 			message->setIsPinned(false);
@@ -751,7 +752,7 @@ not_null<HistoryItem*> History::addNewToBack(
 				item->id,
 				{ from, till }));
 			if (sharedMediaTypes.test(Storage::SharedMediaType::Pinned)) {
-				peer->setHasPinnedMessages(true);
+				setHasPinnedMessages(true);
 			}
 		}
 	}
@@ -1023,7 +1024,7 @@ void History::applyServiceChanges(
 						Storage::SharedMediaType::Pinned,
 						{ id },
 						{ id, ServerMaxMsgId }));
-					peer->setHasPinnedMessages(true);
+					setHasPinnedMessages(true);
 				}
 			});
 		}
@@ -1061,6 +1062,8 @@ void History::applyServiceChanges(
 				}
 			}
 		}
+	}, [&](const MTPDmessageActionSetChatTheme &data) {
+		peer->setThemeEmoji(qs(data.vemoticon()));
 	}, [](const auto &) {
 	});
 }
@@ -1086,7 +1089,7 @@ void History::newItemAdded(not_null<HistoryItem*> item) {
 	if (const auto from = item->from() ? item->from()->asUser() : nullptr) {
 		if (from == item->author()) {
 			_sendActionPainter.clear(from);
-			owner().repliesSendActionPaintersClear(this, from);
+			owner().sendActionManager().repliesPaintersClear(this, from);
 		}
 		from->madeAction(item->date());
 	}
@@ -1399,7 +1402,7 @@ void History::addToSharedMedia(
 				std::move(medias[i]),
 				{ from, till }));
 			if (type == Storage::SharedMediaType::Pinned) {
-				peer->setHasPinnedMessages(true);
+				setHasPinnedMessages(true);
 			}
 		}
 	}
@@ -3119,6 +3122,15 @@ void History::removeBlock(not_null<HistoryBlock*> block) {
 	} else if (!blocks.empty() && !blocks.back()->messages.empty()) {
 		blocks.back()->messages.back()->nextInBlocksRemoved();
 	}
+}
+
+bool History::hasPinnedMessages() const {
+	return _hasPinnedMessages;
+}
+
+void History::setHasPinnedMessages(bool has) {
+	_hasPinnedMessages = has;
+	session().changes().historyUpdated(this, UpdateFlag::PinnedMessages);
 }
 
 History::~History() = default;

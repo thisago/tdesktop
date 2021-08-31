@@ -304,6 +304,7 @@ void Instance::reset(const Language &data) {
 		_values[i] = GetOriginalValue(ushort(i));
 	}
 	ranges::fill(_nonDefaultSet, 0);
+	updateChoosingStickerReplacement();
 
 	_idChanges.fire_copy(_id);
 }
@@ -549,6 +550,7 @@ void Instance::fillFromSerialized(
 		applyValue(nonDefaultStrings[i], nonDefaultStrings[i + 1]);
 	}
 	updatePluralRules();
+	updateChoosingStickerReplacement();
 
 	_idChanges.fire_copy(_id);
 }
@@ -573,6 +575,7 @@ void Instance::fillFromCustomContent(
 	_pluralId = PluralCodeForCustom(absolutePath, relativePath);
 	_name = _nativeName = QString();
 	loadFromCustomContent(absolutePath, relativePath, content);
+	updateChoosingStickerReplacement();
 
 	_idChanges.fire_copy(_id);
 }
@@ -601,6 +604,35 @@ bool Instance::loadFromCustomFile(const QString &filePath) {
 		return true;
 	}
 	return false;
+}
+
+void Instance::updateChoosingStickerReplacement() {
+	// A language changing in the runtime is not supported.
+	const auto replacement = kChoosingStickerReplacement.utf8();
+	const auto phrase = tr::lng_send_action_choose_sticker(tr::now);
+	const auto first = phrase.indexOf(replacement);
+	const auto support = (first != -1);
+	const auto phraseNamed = tr::lng_user_action_choose_sticker(
+		tr::now,
+		lt_user,
+		QString());
+	const auto firstNamed = phraseNamed.indexOf(replacement);
+	const auto supportNamed = (firstNamed != -1);
+
+	_choosingStickerReplacement.support = (supportNamed && support);
+	_choosingStickerReplacement.rightIndex = phrase.size() - first;
+	_choosingStickerReplacement.rightIndexNamed = phraseNamed.size()
+		- firstNamed;
+}
+
+bool Instance::supportChoosingStickerReplacement() const {
+	return _choosingStickerReplacement.support;
+}
+
+int Instance::rightIndexChoosingStickerReplacement(bool named) const {
+	return named
+		? _choosingStickerReplacement.rightIndexNamed
+		: _choosingStickerReplacement.rightIndex;
 }
 
 // SetCallback takes two QByteArrays: key, value.

@@ -971,6 +971,11 @@ StickersListWidget::StickersListWidget(
 		}
 		refreshRecent();
 	}, lifetime());
+
+	positionValue(
+	) | rpl::skip(1) | rpl::map_to(
+		TabbedSelector::Action::Update
+	) | rpl::start_to_stream(_choosingUpdated, lifetime());
 }
 
 Main::Session &StickersListWidget::session() const {
@@ -987,6 +992,11 @@ rpl::producer<> StickersListWidget::scrollUpdated() const {
 
 rpl::producer<> StickersListWidget::checkForHide() const {
 	return _checkForHide.events();
+}
+
+auto StickersListWidget::choosingUpdated() const
+-> rpl::producer<TabbedSelector::Action> {
+	return _choosingUpdated.events();
 }
 
 object_ptr<TabbedSelector::InnerFooter> StickersListWidget::createFooter() {
@@ -2362,6 +2372,7 @@ TabbedSelector::InnerFooter *StickersListWidget::getFooter() const {
 }
 
 void StickersListWidget::processHideFinished() {
+	_choosingUpdated.fire(TabbedSelector::Action::Cancel);
 	clearSelection();
 	clearHeavyData();
 	if (_footer) {
