@@ -9,6 +9,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "data/data_file_origin.h"
 
+namespace Main {
+class Session;
+} // namespace Main
+
 class History;
 class PhotoData;
 class DocumentData;
