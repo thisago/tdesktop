@@ -233,7 +233,8 @@ QByteArray Settings::serialize() const {
 			<< qint32(_disableOpenGL ? 1 : 0)
 			<< _photoEditorBrush
 			<< qint32(_groupCallNoiseSuppression ? 1 : 0)
-			<< qint32(_voicePlaybackSpeed * 100);
+			<< qint32(_voicePlaybackSpeed * 100)
+			<< qint32(_closeToTaskbar.current() ? 1 : 0);
 	}
 	return result;
 }
@@ -329,6 +330,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	QByteArray proxy;
 	qint32 hiddenGroupCallTooltips = qint32(_hiddenGroupCallTooltips.value());
 	QByteArray photoEditorBrush = _photoEditorBrush;
+	qint32 closeToTaskbar = _closeToTaskbar.current() ? 1 : 0;
 
 	stream >> themesAccentColors;
 	if (!stream.atEnd()) {
@@ -499,6 +501,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	if (!stream.atEnd()) {
 		stream >> voicePlaybackSpeed;
 	}
+	if (!stream.atEnd()) {
+		stream >> closeToTaskbar;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for Core::Settings::constructFromSerialized()"));
@@ -653,6 +658,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 				: Tooltip(0));
 	}();
 	_photoEditorBrush = photoEditorBrush;
+	_closeToTaskbar = (closeToTaskbar == 1);
 }
 
 QString Settings::getSoundPath(const QString &key) const {

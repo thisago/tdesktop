@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwidget.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
+#include "history/history.h"
 #include "apiwrap.h"
 
 #include <QtGui/QGuiApplication>
@@ -307,7 +308,11 @@ bool ResolveUsername(
 			}
 			: Navigation::RepliesByLinkInfo{ v::null },
 		.startToken = startToken,
-		.voicechatHash = (params.contains(u"voicechat"_q)
+		.voicechatHash = (params.contains(u"livestream"_q)
+			? std::make_optional(params.value(u"livestream"_q))
+			: params.contains(u"videochat"_q)
+			? std::make_optional(params.value(u"videochat"_q))
+			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
 			: std::nullopt),
 		.clickFromMessageId = fromMessageId,
@@ -464,6 +469,29 @@ bool ShowInviteLink(
 	return true;
 }
 
+bool ResolveTestChatTheme(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	const auto params = url_parse_params(
+		match->captured(1),
+		qthelp::UrlParamNameTransform::ToLower);
+	if (const auto history = controller->activeChatCurrent().history()) {
+		controller->clearCachedChatThemes();
+		const auto theme = history->owner().cloudThemes().updateThemeFromLink(
+			history->peer->themeEmoji(),
+			params);
+		if (theme) {
+			[[maybe_unused]] auto value = controller->cachedChatThemeValue(
+				*theme);
+		}
+	}
+	return true;
+}
+
 } // namespace
 
 const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
@@ -523,6 +551,10 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 		{
 			qsl("^settings(/folders|/devices|/language)?$"),
 			ResolveSettings
+		},
+		{
+			qsl("^test_chat_theme/?\\?(.+)(#|$)"),
+			ResolveTestChatTheme,
 		},
 		{
 			qsl("^([^\\?]+)(\\?|#|$)"),
