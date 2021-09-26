@@ -44,6 +44,8 @@ include(cmake/td_forkgram.cmake)
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}/platform/win/windows_quiethours.idl)
+
+    nuget_add_winrt(Telegram)
 endif()
 
 set_target_properties(Telegram PROPERTIES AUTOMOC ON AUTORCC ON)
