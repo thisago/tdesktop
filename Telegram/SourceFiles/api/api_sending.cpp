@@ -128,7 +128,7 @@ void SendExistingMedia(
 		messagePostAuthor,
 		media,
 		caption,
-		MTPReplyMarkup());
+		HistoryMessageMarkupData());
 
 	auto performRequest = [=](const auto &repeatRequest) -> void {
 		auto &histories = history->owner().histories();
@@ -327,7 +327,7 @@ bool SendDice(Api::MessageToSend &message) {
 		messagePostAuthor,
 		TextWithEntities(),
 		MTP_messageMediaDice(MTP_int(0), MTP_string(emoji)),
-		MTPReplyMarkup());
+		HistoryMessageMarkupData());
 
 	const auto requestType = Data::Histories::RequestType::Send;
 	histories.sendRequest(history, requestType, [=](Fn<void()> finish) {
@@ -510,7 +510,7 @@ void SendConfirmedFile(
 			messagePostAuthor,
 			caption,
 			media,
-			MTPReplyMarkup(),
+			HistoryMessageMarkupData(),
 			groupId);
 	}
 

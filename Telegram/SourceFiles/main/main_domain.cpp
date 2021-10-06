@@ -346,11 +346,14 @@ bool Domain::removePasscodeIfEmpty() {
 		return false;
 	}
 	Local::reset();
+
+	// We completely logged out, remove the passcode if it was there.
+	if (Core::App().passcodeLocked()) {
+		Core::App().unlockPasscode();
+	}
 	if (!_local->hasLocalPasscode()) {
 		return false;
 	}
-	// We completely logged out, remove the passcode if it was there.
-	Core::App().unlockPasscode();
 	_local->setPasscode(QByteArray());
 	return true;
 }

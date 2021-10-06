@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_dlls.h"
 #include "base/platform/base_platform_info.h"
+#include "base/platform/win/base_windows_co_task_mem.h"
 #include "base/platform/win/base_windows_winrt.h"
 #include "base/call_delayed.h"
 #include "lang/lang_keys.h"
@@ -31,9 +32,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <Shobjidl.h>
 #include <ShObjIdl_core.h>
 #include <shellapi.h>
-
-#include <roapi.h>
-#include <wrl/client.h>
 
 #include <openssl/conf.h>
 #include <openssl/engine.h>
@@ -67,7 +65,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define WM_NCPOINTERUP 0x0243
 #endif
 
-using namespace Microsoft::WRL;
 using namespace Platform;
 
 namespace {
@@ -421,17 +418,17 @@ namespace {
 namespace Platform {
 
 PermissionStatus GetPermissionStatus(PermissionType type) {
-	if (type==PermissionType::Microphone) {
-		PermissionStatus result=PermissionStatus::Granted;
+	if (type == PermissionType::Microphone) {
+		PermissionStatus result = PermissionStatus::Granted;
 		HKEY hKey;
-		LSTATUS res=RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone", 0, KEY_QUERY_VALUE, &hKey);
-		if(res==ERROR_SUCCESS) {
+		LSTATUS res = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone", 0, KEY_QUERY_VALUE, &hKey);
+		if (res == ERROR_SUCCESS) {
 			wchar_t buf[20];
-			DWORD length=sizeof(buf);
-			res=RegQueryValueEx(hKey, L"Value", NULL, NULL, (LPBYTE)buf, &length);
-			if(res==ERROR_SUCCESS) {
-				if(wcscmp(buf, L"Deny")==0) {
-					result=PermissionStatus::Denied;
+			DWORD length = sizeof(buf);
+			res = RegQueryValueEx(hKey, L"Value", NULL, NULL, (LPBYTE)buf, &length);
+			if (res == ERROR_SUCCESS) {
+				if (wcscmp(buf, L"Deny") == 0) {
+					result = PermissionStatus::Denied;
 				}
 			}
 			RegCloseKey(hKey);
@@ -497,20 +494,17 @@ void _manageAppLnk(bool create, bool silent, int path_csidl, const wchar_t *args
 	if (SUCCEEDED(hr)) {
 		QString lnk = QString::fromWCharArray(startupFolder) + '\\' + AppFile.utf16() + qsl(".lnk");
 		if (create) {
-			ComPtr<IShellLink> shellLink;
-			hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
-			if (SUCCEEDED(hr)) {
-				ComPtr<IPersistFile> persistFile;
-
+			const auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
+				CLSID_ShellLink,
+				CLSCTX_INPROC_SERVER);
+			if (shellLink) {
 				QString exe = QDir::toNativeSeparators(cExeDir() + cExeName()), dir = QDir::toNativeSeparators(QDir(cWorkingDir()).absolutePath());
 				shellLink->SetArguments(args);
 				shellLink->SetPath(exe.toStdWString().c_str());
 				shellLink->SetWorkingDirectory(dir.toStdWString().c_str());
 				shellLink->SetDescription(description);
 
-				ComPtr<IPropertyStore> propertyStore;
-				hr = shellLink.As(&propertyStore);
-				if (SUCCEEDED(hr)) {
+				if (const auto propertyStore = shellLink.try_as<IPropertyStore>()) {
 					PROPVARIANT appIdPropVar;
 					hr = InitPropVariantFromString(AppUserModelId::getId(), &appIdPropVar);
 					if (SUCCEEDED(hr)) {
@@ -522,8 +516,7 @@ void _manageAppLnk(bool create, bool silent, int path_csidl, const wchar_t *args
 					}
 				}
 
-				hr = shellLink.As(&persistFile);
-				if (SUCCEEDED(hr)) {
+				if (const auto persistFile = shellLink.try_as<IPersistFile>()) {
 					hr = persistFile->Save(lnk.toStdWString().c_str(), TRUE);
 				} else {
 					if (!silent) LOG(("App Error: could not create interface IID_IPersistFile %1").arg(hr));
@@ -555,17 +548,12 @@ bool psLaunchMaps(const Data::LocationPoint &point) {
 		return false;
 	}
 
-	auto handler = (LPWSTR)nullptr;
-	const auto guard = gsl::finally([&] {
-		if (handler) {
-			::CoTaskMemFree(handler);
-		}
-	});
+	auto handler = base::CoTaskMemString();
 	const auto result = aar->QueryCurrentDefault(
 		L"bingmaps",
 		AT_URLPROTOCOL,
 		AL_EFFECTIVE,
-		&handler);
+		handler.put());
 	if (FAILED(result) || !handler) {
 		return false;
 	}

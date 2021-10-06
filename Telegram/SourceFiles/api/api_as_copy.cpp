@@ -72,11 +72,11 @@ MTPinputMedia InputMediaFromItem(not_null<HistoryItem*> i) {
 
 MsgId ReplyToIdFromDraft(not_null<PeerData*> peer) {
 	const auto history = peer->owner().history(peer);
-	const auto replyTo = [&] {
+	const auto replyTo = [&]() -> int64 {
 		if (const auto localDraft = history->localDraft()) {
-			return localDraft->msgId;
+			return localDraft->msgId.bare;
 		} else if (const auto cloudDraft = history->cloudDraft()) {
-			return cloudDraft->msgId;
+			return cloudDraft->msgId.bare;
 		} else {
 			return 0;
 		}
