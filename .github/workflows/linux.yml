@@ -157,12 +157,9 @@ jobs:
 
       - name: Upload.
         if: (github.event_name == 'release')
-        uses: lovasoa/upload-release-asset@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: svenstaro/upload-release-action@master
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./Telegram.tar.xz
-          asset_label: "Linux 64 bit: Binary"
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./Telegram.tar.xz
+          tag: ${{ github.event.release.tag_name }}
           asset_name: Telegram.tar.xz
-          asset_content_type: application/x-gzip
