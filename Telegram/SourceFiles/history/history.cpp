@@ -2262,6 +2262,9 @@ void History::setChatListMessage(HistoryItem *item) {
 	}
 	const auto was = _chatListMessage.value_or(nullptr);
 	if (item) {
+		if (item->isSponsored()) {
+			return;
+		}
 		if (_chatListMessage
 			&& *_chatListMessage
 			&& !IsServerMsgId((*_chatListMessage)->id)
@@ -2670,6 +2673,10 @@ void History::markTopPromotionAboutShown() {
 
 QString History::topPromotionMessage() const {
 	return _topPromotedMessage;
+}
+
+bool History::canHaveSponsoredMessages() const {
+	return isChannel();
 }
 
 bool History::clearUnreadOnClientSide() const {

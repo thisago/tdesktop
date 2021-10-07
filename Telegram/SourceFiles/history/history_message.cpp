@@ -446,6 +446,7 @@ struct HistoryMessage::CreateConfig {
 	TimeId editDate = 0;
 	bool imported = false;
 	HistoryMessageMarkupData markup;
+	bool sponsored = false;
 
 	// For messages created from MTP structs.
 	const MTPMessageReplies *mtpReplies = nullptr;
@@ -795,6 +796,9 @@ void HistoryMessage::createComponentsHelper(
 	config.markup = std::move(markup);
 	if (flags & MessageFlag::HasPostAuthor) config.author = postAuthor;
 	if (flags & MessageFlag::HasViews) config.viewsCount = 1;
+	if (flags & MessageFlag::IsSponsored) {
+		config.sponsored = true;
+	}
 
 	createComponents(std::move(config));
 }
@@ -1098,6 +1102,9 @@ void HistoryMessage::createComponents(CreateConfig &&config) {
 	}
 	if (config.editDate != TimeId(0)) {
 		mask |= HistoryMessageEdited::Bit();
+	}
+	if (config.sponsored) {
+		mask |= HistoryMessageSponsored::Bit();
 	}
 	if (config.originalDate != 0) {
 		mask |= HistoryMessageForwarded::Bit();
