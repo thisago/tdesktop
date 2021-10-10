@@ -197,7 +197,9 @@ void PasscodeLockWidget::changed() {
 		update();
 	}
 
-	QTimer::singleShot(100, this, [=] { submitOnChange(); });
+	if (Core::App().settings().fork().autoSubmitPasscode()) {
+		QTimer::singleShot(100, this, [=] { submitOnChange(); });
+	}
 }
 
 void PasscodeLockWidget::resizeEvent(QResizeEvent *e) {

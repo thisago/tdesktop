@@ -386,6 +386,15 @@ void SetupForkContent(
 		tr::lng_settings_sticker_size_label));
 	});
 
+	//
+	add(
+		tr::lng_settings_auto_submit_passcode(tr::now),
+		Core::App().settings().fork().autoSubmitPasscode(),
+		[=](bool checked) {
+			Core::App().settings().fork().setAutoSubmitPasscode(checked);
+			Core::App().saveSettingsDelayed();
+		});
+
 }
 
 void SetupFork(

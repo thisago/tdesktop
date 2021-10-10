@@ -80,6 +80,12 @@ public:
 	void setUseOriginalTrayIcon(bool newValue) {
 		_useOriginalTrayIcon = newValue;
 	}
+	[[nodiscard]] bool autoSubmitPasscode() const {
+		return _autoSubmitPasscode;
+	}
+	void setAutoSubmitPasscode(bool newValue) {
+		_autoSubmitPasscode = newValue;
+	}
 
 private:
 	bool _squareUserpics = false;
@@ -93,6 +99,7 @@ private:
 	int _customStickerSize = 256;
 	bool _useBlackTrayIcon = false;
 	bool _useOriginalTrayIcon = false;
+	bool _autoSubmitPasscode = false;
 
 };
 
