@@ -11,7 +11,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_sending.h"
 #include "api/api_text_entities.h"
 #include "base/random.h"
-#include "boxes/confirm_box.h"
 #include "data/data_document.h"
 #include "data/data_drafts.h"
 #include "data/data_photo.h"

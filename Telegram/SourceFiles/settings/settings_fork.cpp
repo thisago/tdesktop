@@ -7,7 +7,6 @@ Author: 23rd.
 #include "base/qthelp_url.h"
 #include "base/weak_ptr.h"
 #include "boxes/abstract_box.h"
-#include "boxes/confirm_box.h"
 #include "core/application.h"
 #include "core/file_utilities.h"
 #include "facades.h"
@@ -19,6 +18,7 @@ Author: 23rd.
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
 #include "styles/style_settings.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/input_fields.h"
 #include "ui/wrap/slide_wrap.h"
@@ -232,7 +232,7 @@ void SetupForkContent(
 	};
 
 	const auto restartBox = [=](Fn<void()> ok, Fn<void()> cancel) {
-		Ui::show(Box<ConfirmBox>(
+		Ui::show(Box<Ui::ConfirmBox>(
 			tr::lng_settings_need_restart(tr::now),
 			tr::lng_settings_restart_now(tr::now),
 			[=] {

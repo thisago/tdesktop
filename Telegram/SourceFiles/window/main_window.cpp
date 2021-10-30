@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_widgets.h"
 #include "styles/style_window.h"
 
-#include <QtWidgets/QDesktopWidget>
 #include <QtCore/QMimeData>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
@@ -677,7 +676,7 @@ void MainWindow::updateUnreadCounter() {
 }
 
 QRect MainWindow::computeDesktopRect() const {
-	return QApplication::desktop()->availableGeometry(this);
+	return (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
 }
 
 void MainWindow::savePosition(Qt::WindowState state) {
@@ -813,12 +812,12 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 }
 
 int MainWindow::maximalExtendBy() const {
-	auto desktop = QDesktopWidget().availableGeometry(this);
+	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
 	return std::max(desktop.width() - body()->width(), 0);
 }
 
 bool MainWindow::canExtendNoMove(int extendBy) const {
-	auto desktop = QDesktopWidget().availableGeometry(this);
+	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
 	auto inner = body()->mapToGlobal(body()->rect());
 	auto innerRight = (inner.x() + inner.width() + extendBy);
 	auto desktopRight = (desktop.x() + desktop.width());
@@ -826,7 +825,7 @@ bool MainWindow::canExtendNoMove(int extendBy) const {
 }
 
 int MainWindow::tryToExtendWidthBy(int addToWidth) {
-	auto desktop = QDesktopWidget().availableGeometry(this);
+	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
 	auto inner = body()->mapToGlobal(body()->rect());
 	accumulate_min(
 		addToWidth,
