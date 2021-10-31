@@ -15,6 +15,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_info.h"
 #include "base/qthelp_regex.h"
 
+#include <QRegularExpression>
+
 namespace Lang {
 namespace {
 
@@ -741,7 +743,7 @@ void Instance::applyValue(const QByteArray &key, const QByteArray &value) {
 			if (ranges::contains(tr::hasTelegram, key)) {
 				auto v = std::move(value);
 				_values[key] = v.replace(
-					QRegExp("Telegram"),
+					QRegularExpression("Telegram"),
 					kCustomBrand.utf16());
 				return;
 			}
