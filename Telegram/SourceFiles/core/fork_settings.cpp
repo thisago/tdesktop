@@ -7,6 +7,12 @@ Author: 23rd.
 
 namespace Core {
 
+namespace {
+
+constexpr auto kDefaultStickerSize = 256;
+
+} // namespace
+
 ForkSettings::ForkSettings() {
 }
 
@@ -88,7 +94,9 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 	_searchEngineUrl = searchEngineUrl;
 	_searchEngine = (searchEngine == 1);
 	_allRecentStickers = (allRecentStickers == 1);
-	_customStickerSize = customStickerSize;
+	_customStickerSize = customStickerSize
+		? std::clamp(customStickerSize, 50, kDefaultStickerSize)
+		: kDefaultStickerSize;
 	_useBlackTrayIcon = (useBlackTrayIcon == 1);
 	_useOriginalTrayIcon = (useOriginalTrayIcon == 1);
 	_autoSubmitPasscode = (autoSubmitPasscode == 1);
@@ -103,7 +111,7 @@ void ForkSettings::resetOnLastLogout() {
 	_searchEngineUrl = qsl("https://dgg.gg/%q");
 	_searchEngine = false;
 	_allRecentStickers = true;
-	_customStickerSize = 256;
+	_customStickerSize = kDefaultStickerSize;
 	_useOriginalTrayIcon = false;
 	_autoSubmitPasscode = false;
 }
