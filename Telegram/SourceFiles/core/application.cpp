@@ -141,12 +141,7 @@ Application::Application(not_null<Launcher*> launcher)
 , _langpack(std::make_unique<Lang::Instance>())
 , _langCloudManager(std::make_unique<Lang::CloudManager>(langpack()))
 , _emojiKeywords(std::make_unique<ChatHelpers::EmojiKeywords>())
-, _logo(Window::LoadLogo())
-, _logoNoMargin(Window::LoadLogoNoMargin())
 , _autoLockTimer([=] { checkAutoLock(); }) {
-	Expects(!_logo.isNull());
-	Expects(!_logoNoMargin.isNull());
-
 	Ui::Integration::Set(&_private->uiIntegration);
 
 	passcodeLockChanges(
@@ -330,21 +325,6 @@ void Application::run() {
 			[[maybe_unused]] const auto countriesCopy = countries;
 		});
 	}
-
-	////
-	const auto isSquare = _settings.fork().squareUserpics();
-	const auto isOriginal = _settings.fork().useOriginalTrayIcon();
-	auto logo = isOriginal
-		? Window::LoadLogoNoMargin()
-		: isSquare
-			? Core::App().logoSquareNoMargin()
-			: Core::App().logoForkgramNoMargin();
-
-	if (_settings.fork().useBlackTrayIcon()) {
-		Window::ConvertIconToBlack(logo);
-	}
-	_logoNoMargin = std::move(logo);
-	_logo = _logoNoMargin;
 }
 
 void Application::showOpenGLCrashNotification() {
