@@ -71,6 +71,13 @@ jobs:
       - name: Get repository name.
         run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
 
+      - name: Free some space.
+        run: |
+          echo "Free some space."
+          rm -rfv /__t/go
+          rm -rfv /__t/CodeQL
+          rm -rfv $LibrariesPath/tg_owt/out/Debug
+
       - name: Clone.
         uses: actions/checkout@v2
         with:
