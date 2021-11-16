@@ -20,9 +20,9 @@ ENV CMAKE_VER 3.21.3
 ENV CMAKE_FILE cmake-$CMAKE_VER-Linux-x86_64.sh
 ENV PATH ${PATH}:${QT5_PREFIX}/bin:${QT6_PREFIX}/bin
 
-RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
-RUN yum -y install centos-release-scl
+RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && yum clean all
+RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm && yum clean all
+RUN yum -y install centos-release-scl && yum clean all
 
 RUN yum -y install git meson ninja-build autoconf automake libtool \
 	fontconfig-devel freetype-devel libX11-devel at-spi2-core-devel alsa-lib-devel \
@@ -30,7 +30,7 @@ RUN yum -y install git meson ninja-build autoconf automake libtool \
 	webkitgtk4-devel pkgconfig bison yasm file which xorg-x11-util-macros \
 	devtoolset-9-make devtoolset-9-gcc devtoolset-9-gcc-c++ \
 	devtoolset-9-binutils llvm-toolset-7.0 llvm-toolset-7.0-clang-devel \
-	llvm-toolset-7.0-llvm-devel
+	llvm-toolset-7.0-llvm-devel perl-XML-Parser && yum clean all
 
 SHELL [ "bash", "-c", ". /opt/rh/devtoolset-9/enable; exec bash -c \"$@\"", "-s"]
 
@@ -45,7 +45,7 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN rm $CMAKE_FILE
 
 FROM builder AS patches
-RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout 17c7e63cfd
+RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout be978cc050
 
 FROM builder AS extra-cmake-modules
 
@@ -652,7 +652,6 @@ RUN rm -rf libsigcplusplus
 FROM patches AS glibmm
 COPY --from=mm-common ${LibrariesPath}/mm-common-cache /
 COPY --from=libsigcplusplus ${LibrariesPath}/libsigcplusplus-cache /
-RUN yum -y install perl-XML-Parser
 
 # equals to glib version of Ubuntu 14.04
 RUN git clone -b 2.40.0 --depth=1 $GIT/GNOME/glibmm.git
@@ -677,6 +676,7 @@ ARG QT6
 
 COPY --from=libffi ${LibrariesPath}/libffi-cache /
 COPY --from=zlib ${LibrariesPath}/zlib-cache /
+COPY --from=libepoxy ${LibrariesPath}/libepoxy-cache /
 COPY --from=libproxy ${LibrariesPath}/libproxy-cache /
 COPY --from=mozjpeg ${LibrariesPath}/mozjpeg-cache /
 COPY --from=xcb ${LibrariesPath}/xcb-cache /

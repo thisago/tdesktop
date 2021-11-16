@@ -208,7 +208,6 @@ void Application::run() {
 	style::internal::StartFonts();
 
 	ThirdParty::start();
-	refreshGlobalProxy(); // Depends on Core::IsAppLaunched().
 
 	// Depends on OpenSSL on macOS, so on ThirdParty::start().
 	// Depends on notifications settings.
@@ -216,6 +215,8 @@ void Application::run() {
 
 	startLocalStorage();
 	ValidateScale();
+
+	refreshGlobalProxy(); // Depends on app settings being read.
 
 	if (Local::oldSettingsVersion() < AppVersion) {
 		RegisterUrlScheme();
@@ -1080,7 +1081,7 @@ void Application::QuitAttempt() {
 	if (!IsAppLaunched()
 		|| Sandbox::Instance().isSavingSession()
 		|| App().readyToQuit()) {
-		QApplication::quit();
+		Sandbox::QuitWhenStarted();
 	}
 }
 
@@ -1116,7 +1117,7 @@ void Application::quitPreventFinished() {
 
 void Application::quitDelayed() {
 	if (!_private->quitTimer.isActive()) {
-		_private->quitTimer.setCallback([] { QApplication::quit(); });
+		_private->quitTimer.setCallback([] { Sandbox::QuitWhenStarted(); });
 		_private->quitTimer.callOnce(kQuitPreventTimeoutMs);
 	}
 }

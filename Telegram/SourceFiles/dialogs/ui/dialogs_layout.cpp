@@ -424,7 +424,7 @@ void paintRow(
 						: st::dialogsSendingIcon));
 			}
 		} else if (item && !item->isEmpty() && item->needCheck()) {
-			if (item->id > 0) {
+			if (!item->isSending() && !item->hasFailed()) {
 				if (item->unread()) {
 					return &(active
 						? st::dialogsSentIconActive

@@ -111,8 +111,6 @@ void SendExistingMedia(
 	if (message.action.options.scheduled) {
 		flags |= MessageFlag::IsOrWasScheduled;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_date;
-	} else {
-		flags |= MessageFlag::LocalHistoryEntry;
 	}
 
 	session->data().registerMessageRandomId(randomId, newId);
@@ -310,8 +308,6 @@ bool SendDice(Api::MessageToSend &message) {
 	if (message.action.options.scheduled) {
 		flags |= MessageFlag::IsOrWasScheduled;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_date;
-	} else {
-		flags |= MessageFlag::LocalHistoryEntry;
 	}
 
 	session->data().registerMessageRandomId(randomId, newId);
@@ -426,8 +422,6 @@ void SendConfirmedFile(
 
 		// Scheduled messages have no the 'edited' badge.
 		flags |= MessageFlag::HideEdited;
-	} else {
-		flags |= MessageFlag::LocalHistoryEntry;
 	}
 	if (file->type == SendMediaType::Audio) {
 		if (!peer->isChannel() || peer->isMegagroup()) {
