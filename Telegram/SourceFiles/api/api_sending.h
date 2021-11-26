@@ -24,24 +24,24 @@ struct MessageToSend;
 struct SendAction;
 
 void SendExistingDocument(
-	Api::MessageToSend &&message,
+	MessageToSend &&message,
 	not_null<DocumentData*> document);
 
 void SendExistingPhoto(
-	Api::MessageToSend &&message,
+	MessageToSend &&message,
 	not_null<PhotoData*> photo);
 
 void SendExistingDocument(
-	Api::MessageToSend &&message,
+	MessageToSend &&message,
 	not_null<DocumentData*> document,
 	Data::FileOrigin origin);
 
 void SendExistingPhoto(
-	Api::MessageToSend &&message,
+	MessageToSend &&message,
 	not_null<PhotoData*> photo,
 	Data::FileOrigin origin);
 
-bool SendDice(Api::MessageToSend &message);
+bool SendDice(MessageToSend &message);
 
 void FillMessagePostFlags(
 	const SendAction &action,

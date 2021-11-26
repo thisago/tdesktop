@@ -1597,15 +1597,17 @@ void ListWidget::showContextMenu(
 								document,
 								DocumentSaveClickHandler::Mode::ToNewFile);
 						});
-					_contextMenu->addAction(
-						(isVideo
-							? tr::lng_context_save_video(tr::now)
-							: isVoice
-							? tr::lng_context_save_audio(tr::now)
-							: isAudio
-							? tr::lng_context_save_audio_file(tr::now)
-							: tr::lng_context_save_file(tr::now)),
-						std::move(handler));
+					if (_peer->allowsForwarding()) {
+						_contextMenu->addAction(
+							(isVideo
+								? tr::lng_context_save_video(tr::now)
+								: isVoice
+								? tr::lng_context_save_audio(tr::now)
+								: isAudio
+								? tr::lng_context_save_audio_file(tr::now)
+								: tr::lng_context_save_file(tr::now)),
+							std::move(handler));
+					}
 				}
 			}
 		}
@@ -1718,12 +1720,9 @@ void ListWidget::forwardItems(MessageIdsList &&items) {
 
 void ListWidget::deleteSelected() {
 	if (const auto box = deleteItems(collectSelectedIds())) {
-		const auto weak = Ui::MakeWeak(this);
-		box->setDeleteConfirmedCallback([=]{
-			if (const auto strong = weak.data()) {
-				strong->clearSelected();
-			}
-		});
+		box->setDeleteConfirmedCallback(crl::guard(this, [=]{
+			clearSelected();
+		}));
 	}
 }
 

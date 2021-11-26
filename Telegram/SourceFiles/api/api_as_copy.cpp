@@ -121,7 +121,8 @@ void SendAlbumFromItems(HistoryItemsList items, ToSend &&toSend) {
 			peer->input,
 			MTP_int(replyTo),
 			MTP_vector<MTPInputSingleMedia>(medias),
-			MTP_int(0)
+			MTP_int(0),
+			MTP_inputPeerEmpty()
 		)).done([=](const MTPUpdates &result) {
 			history->owner().session().api().applyUpdates(result);
 		}).fail([=](const MTP::Error &error) {
@@ -145,7 +146,7 @@ void SendExistingMediaFromItem(
 		Api::AsCopy::ToSend &&toSend) {
 	for (const auto peer : toSend.peers) {
 		const auto history = peer->owner().history(peer);
-		auto message = ApiWrap::MessageToSend(history);
+		auto message = MessageToSend(SendAction{ history });
 		if (!item->media()) {
 			message.textWithTags = PrepareEditText(item);
 			history->session().api().sendMessage(std::move(message));
