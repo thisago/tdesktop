@@ -135,7 +135,7 @@ jobs:
 
       - name: Check.
         run: |
-          filePath="$REPO_NAME/out/Release/Release/Telegram"
+          filePath="$REPO_NAME/out/Release/Telegram"
           if test -f "$filePath"; then
             echo "Build successfully done! :)"
 
@@ -149,7 +149,7 @@ jobs:
       - name: Compress.
         if: (github.event_name == 'release')
         run: |
-          filePath="$REPO_NAME/out/Release/Release/Telegram"
+          filePath="$REPO_NAME/out/Release/Telegram"
           cp $filePath .
           tar -cJvf Telegram.tar.xz Telegram
 
