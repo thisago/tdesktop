@@ -18,13 +18,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_media.h"
 #include "history/view/media/history_view_sticker.h"
 #include "history/view/media/history_view_web_page.h"
-#include "history/history_item_components.h"
-#include "history/history_item_text.h"
+#include "history/view/reactions/message_reactions_list.h"
 #include "history/view/history_view_message.h"
 #include "history/view/history_view_service_message.h"
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_context_menu.h"
+#include "history/view/history_view_react_button.h"
 #include "history/view/history_view_emoji_interactions.h"
+#include "history/history_item_components.h"
+#include "history/history_item_text.h"
 #include "ui/chat/chat_style.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/image/image.h"
@@ -34,12 +36,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/report_box.h"
 #include "ui/layers/generic_box.h"
 #include "ui/controls/delete_message_context_action.h"
-#include "ui/controls/who_read_context_action.h"
+#include "ui/controls/who_reacted_context_action.h"
 #include "ui/ui_utility.h"
 #include "ui/cached_round_corners.h"
 #include "ui/inactive_press.h"
 #include "window/window_adaptive.h"
 #include "window/window_session_controller.h"
+#include "window/window_controller.h"
 #include "window/window_peer_menu.h"
 #include "window/window_controller.h"
 #include "window/notifications_manager.h"
@@ -50,6 +53,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_interactions.h"
 #include "history/history_widget.h"
 #include "base/platform/base_platform_info.h"
+#include "base/qt_adapters.h"
 #include "base/unixtime.h"
 #include "mainwindow.h"
 #include "layout/layout_selection.h"
@@ -59,11 +63,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_attached_stickers.h"
 #include "api/api_toggling_media.h"
-#include "api/api_who_read.h"
+#include "api/api_who_reacted.h"
 #include "api/api_views.h"
 #include "lang/lang_keys.h"
 #include "data/data_session.h"
 #include "data/data_media_types.h"
+#include "data/data_message_reactions.h"
 #include "data/data_document.h"
 #include "data/data_channel.h"
 #include "data/data_poll.h"
@@ -82,7 +87,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "app.h"
 #include "styles/style_chat.h"
 #include "styles/style_window.h" // st::windowMinWidth
-#include "base/qt_adapters.h"
+#include "styles/style_menu_icons.h"
 
 #include <QtGui/QClipboard>
 #include <QtGui/QDesktopServices>
@@ -178,6 +183,10 @@ HistoryInner::HistoryInner(
 	HistoryView::MakePathShiftGradient(
 		controller->chatStyle(),
 		[=] { update(); }))
+, _reactionsManager(
+	std::make_unique<HistoryView::Reactions::Manager>(
+		this,
+		[=](QRect updated) { update(updated); }))
 , _touchSelectTimer([=] { onTouchSelect(); })
 , _touchScrollTimer([=] { onTouchScrollTimer(); })
 , _scrollDateCheck([this] { scrollDateCheck(); })
@@ -224,6 +233,14 @@ HistoryInner::HistoryInner(
 		_controller->emojiInteractions().playStarted(_peer, std::move(emoji));
 	}, lifetime());
 
+	using ChosenReaction = HistoryView::Reactions::Manager::Chosen;
+	_reactionsManager->chosen(
+	) | rpl::start_with_next([=](ChosenReaction reaction) {
+		if (const auto item = session().data().message(reaction.context)) {
+			item->toggleReaction(reaction.emoji);
+		}
+	}, lifetime());
+
 	session().data().itemRemoved(
 	) | rpl::start_with_next(
 		[this](auto item) { itemRemoved(item); },
@@ -250,11 +267,25 @@ HistoryInner::HistoryInner(
 	}) | rpl::start_with_next([this](not_null<const Element*> view) {
 		mouseActionUpdate();
 	}, lifetime());
+
+	session().data().itemDataChanges(
+	) | rpl::filter([=](not_null<HistoryItem*> item) {
+		return item->mainView() != nullptr;
+	}) | rpl::start_with_next([=](not_null<HistoryItem*> item) {
+		item->mainView()->itemDataChanged();
+	}, lifetime());
+
 	session().changes().historyUpdates(
 		_history,
 		Data::HistoryUpdate::Flag::OutboxRead
 	) | rpl::start_with_next([=] {
 		update();
+	}, lifetime());
+
+	Data::PeerAllowedReactionsValue(
+		_peer
+	) | rpl::start_with_next([=](std::vector<Data::Reaction> &&list) {
+		_reactionsManager->applyList(std::move(list));
 	}, lifetime());
 
 	controller->adaptive().chatWideValue(
@@ -677,6 +708,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		width(),
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
+	const auto now = crl::now();
 	const auto historyDisplayedEmpty = _history->isDisplayedEmpty()
 		&& (!_migrated || _migrated->isDisplayedEmpty());
 	bool noHistoryDisplayed = historyDisplayedEmpty;
@@ -752,6 +784,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 						readMentions.insert(item);
 						_widget->enqueueMessageHighlight(view);
 					}
+					session().data().reactions().poll(item, now);
 				}
 
 				top += height;
@@ -770,8 +803,8 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				view = block->messages[iItem].get();
 				item = view->data();
 			}
-			p.translate(0, -top);
 			context.translate(0, top);
+			p.translate(0, -top);
 		}
 		if (htop >= 0) {
 			auto iBlock = (_curHistory == _history ? _curBlock : 0);
@@ -795,17 +828,19 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 						seltoy - htop);
 					view->draw(p, context);
 
+					const auto item = view->data();
 					const auto middle = top + height / 2;
 					const auto bottom = top + height;
 					if (_visibleAreaBottom >= bottom) {
-						const auto item = view->data();
 						if (!item->out() && item->unread()) {
 							readTill = item;
 						}
-						if (item->isSponsored()) {
-							session().data().sponsoredMessages().view(
-								item->fullId());
-						}
+					}
+					if (item->isSponsored()
+						&& view->markSponsoredViewed(
+							_visibleAreaBottom - top)) {
+						session().data().sponsoredMessages().view(
+							item->fullId());
 					}
 					if (_visibleAreaBottom >= middle
 						&& _visibleAreaTop <= middle) {
@@ -817,6 +852,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 							_widget->enqueueMessageHighlight(view);
 						}
 					}
+					session().data().reactions().poll(item, now);
 				}
 				top += height;
 				context.translate(0, -height);
@@ -834,6 +870,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				view = block->messages[iItem].get();
 				item = view->data();
 			}
+			context.translate(0, top);
 			p.translate(0, -top);
 
 			if (readTill && _widget->doWeReadServerHistory()) {
@@ -930,6 +967,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				return true;
 			});
 			p.setOpacity(1.);
+
+			_reactionsManager->paintButtons(p, context);
+
 			p.translate(0, _historyPaddingTop);
 			_emojiInteractions->paint(p);
 		}
@@ -1407,6 +1447,7 @@ std::unique_ptr<QMimeData> HistoryInner::prepareDrag() {
 void HistoryInner::performDrag() {
 	if (auto mimeData = prepareDrag()) {
 		// This call enters event loop and can destroy any QObject.
+		_reactionsManager->updateButton({});
 		_controller->widget()->launchDrag(
 			std::move(mimeData),
 			crl::guard(this, [=] { mouseActionUpdate(QCursor::pos()); }));
@@ -1419,6 +1460,7 @@ void HistoryInner::itemRemoved(not_null<const HistoryItem*> item) {
 	}
 
 	_animatedStickersPlayed.remove(item);
+	_reactionsManager->remove(item->fullId());
 
 	auto i = _selected.find(item);
 	if (i != _selected.cend()) {
@@ -1664,11 +1706,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		isUponSelected = hasSelected;
 	}
 
-	const auto hasWhoReadItem = _dragStateItem
-		&& Api::WhoReadExists(_dragStateItem);
+	const auto hasWhoReactedItem = _dragStateItem
+		&& Api::WhoReactedExists(_dragStateItem);
 	_menu = base::make_unique_q<Ui::PopupMenu>(
 		this,
-		hasWhoReadItem ? st::whoReadMenu : st::defaultPopupMenu);
+		hasWhoReactedItem ? st::whoReadMenu : st::popupMenuWithIcons);
 	const auto session = &this->session();
 	const auto controller = _controller;
 	const auto groupLeaderOrSelf = [](HistoryItem *item) -> HistoryItem* {
@@ -1692,7 +1734,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		if (canSendMessages) {
 			_menu->addAction(tr::lng_context_reply_msg(tr::now), [=] {
 				_widget->replyToMessage(itemId);
-			});
+			}, &st::menuIconReply);
 		}
 		const auto repliesCount = item->repliesCount();
 		const auto withReplies = (repliesCount > 0);
@@ -1706,7 +1748,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				: tr::lng_replies_view_thread(tr::now);
 			_menu->addAction(phrase, [=] {
 				controller->showRepliesForMessage(_history, rootId);
-			});
+			}, &st::menuIconViewReplies);
 		}
 		const auto t = base::unixtime::now();
 		const auto editItem = (albumPartItem && albumPartItem->allowsEdit(t))
@@ -1718,7 +1760,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto editItemId = editItem->fullId();
 			_menu->addAction(tr::lng_context_edit_msg(tr::now), [=] {
 				_widget->editMessage(editItemId);
-			});
+			}, &st::menuIconEdit);
 		}
 		const auto pinItem = (item->canPin() && item->isPinned())
 			? item
@@ -1729,7 +1771,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto controller = _controller;
 			_menu->addAction(isPinned ? tr::lng_context_unpin_msg(tr::now) : tr::lng_context_pin_msg(tr::now), crl::guard(controller, [=] {
 				Window::ToggleMessagePinned(controller, pinItemId, !isPinned);
-			}));
+			}), isPinned ? &st::menuIconUnpin : &st::menuIconPin);
 		}
 
 		_menu->addAction(tr::lng_background_share(tr::now), [=] {
@@ -1770,17 +1812,17 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		if (!photo->isNull() && media && media->loaded() && !hasCopyRestriction(item)) {
 			_menu->addAction(tr::lng_context_save_image(tr::now), App::LambdaDelayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
 				savePhotoToFile(photo);
-			}));
+			}), &st::menuIconSaveImage);
 			_menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 				copyContextImage(photo, itemId);
-			});
+			}, &st::menuIconCopy);
 		}
 		if (photo->hasAttachedStickers()) {
 			_menu->addAction(tr::lng_context_attached_stickers(tr::now), [=] {
 				session->api().attachedStickers().requestAttachedStickerSets(
 					controller,
 					photo);
-			});
+			}, &st::menuIconStickers);
 		}
 
 		_menu->addAction(tr::lng_context_to_save_messages(tr::now), [=] {
@@ -1793,7 +1835,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		if (document->loading()) {
 			_menu->addAction(tr::lng_context_cancel_download(tr::now), [=] {
 				cancelContextDownload(document);
-			});
+			}, &st::menuIconCancel);
 			return;
 		}
 		const auto itemId = item ? item->fullId() : FullMsgId();
@@ -1812,30 +1854,30 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			if (notAutoplayedGif) {
 				_menu->addAction(tr::lng_context_open_gif(tr::now), [=] {
 					openContextGif(itemId);
-				});
+				}, &st::menuIconShowInChat);
 			}
 			if (!hasCopyRestriction(item)) {
 				_menu->addAction(tr::lng_context_save_gif(tr::now), [=] {
 					saveContextGif(itemId);
-				});
+				}, &st::menuIconGif);
 			}
 		}
 		if (!document->filepath(true).isEmpty()) {
 			_menu->addAction(Platform::IsMac() ? tr::lng_context_show_in_finder(tr::now) : tr::lng_context_show_in_folder(tr::now), [=] {
 				showContextInFolder(document);
-			});
+			}, &st::menuIconShowInFolder);
 		}
 		if (!hasCopyRestriction(item)) {
 			_menu->addAction(lnkIsVideo ? tr::lng_context_save_video(tr::now) : (lnkIsVoice ? tr::lng_context_save_audio(tr::now) : (lnkIsAudio ? tr::lng_context_save_audio_file(tr::now) : tr::lng_context_save_file(tr::now))), App::LambdaDelayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
 				saveDocumentToFile(itemId, document);
-			}));
+			}), &st::menuIconDownload);
 		}
 		if (document->hasAttachedStickers()) {
 			_menu->addAction(tr::lng_context_attached_stickers(tr::now), [=] {
 				session->api().attachedStickers().requestAttachedStickerSets(
 					controller,
 					document);
-			});
+			}, &st::menuIconStickers);
 		}
 
 		_menu->addAction(tr::lng_context_to_save_messages(tr::now), [=] {
@@ -1864,20 +1906,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						_widget->updateTopBarSelection();
 					}
 				}
-			});
+			}, &st::menuIconSelect);
 		}
 	};
-
-	if (hasWhoReadItem) {
-		const auto participantChosen = [=](uint64 id) {
-			controller->showPeerInfo(PeerId(id));
-		};
-		_menu->addAction(Ui::WhoReadContextAction(
-			_menu.get(),
-			Api::WhoRead(_dragStateItem, this, st::defaultWhoRead),
-			participantChosen));
-		_menu->addSeparator();
-	}
 
 	const auto link = ClickHandler::getActive();
 	auto lnkPhoto = dynamic_cast<PhotoClickHandler*>(link.get());
@@ -1890,7 +1921,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				(isUponSelected > 1
 					? tr::lng_context_copy_selected_items(tr::now)
 					: tr::lng_context_copy_selected(tr::now)),
-				[=] { copySelectedText(); });
+				[=] { copySelectedText(); },
+				&st::menuIconCopy);
 			addSearchAction();
 		}
 		addItemActions(item, item);
@@ -1902,18 +1934,18 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		if (item && item->hasDirectLink() && isUponSelected != 2 && isUponSelected != -2) {
 			_menu->addAction(item->history()->peer->isMegagroup() ? tr::lng_context_copy_message_link(tr::now) : tr::lng_context_copy_post_link(tr::now), [=] {
 				HistoryView::CopyPostLink(session, itemId, HistoryView::Context::History);
-			});
+			}, &st::menuIconLink);
 		}
 		if (isUponSelected > 1) {
 			if (selectedState.count > 0 && selectedState.canForwardCount == selectedState.count) {
 				_menu->addAction(tr::lng_context_forward_selected(tr::now), [=] {
 					_widget->forwardSelected();
-				});
+				}, &st::menuIconForward);
 			}
 			if (selectedState.count > 0 && selectedState.canDeleteCount == selectedState.count) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
 					_widget->confirmDeleteSelected();
-				});
+				}, &st::menuIconDelete);
 			}
 			if (selectedState.count > 1 && selectedState.count <= 10) {
 				_menu->addAction(
@@ -1922,7 +1954,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();
-			});
+			}, &st::menuIconSelect);
 		} else if (item) {
 			const auto itemId = item->fullId();
 			const auto blockSender = item->history()->peer->isRepliesChat();
@@ -1930,7 +1962,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (item->allowsForward()) {
 					_menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 						forwardItem(itemId);
-					});
+					}, &st::menuIconForward);
 				}
 				if (item->canDelete()) {
 					_menu->addAction(Ui::DeleteMessageContextAction(
@@ -1942,14 +1974,14 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (!blockSender && item->suggestReport()) {
 					_menu->addAction(tr::lng_context_report_msg(tr::now), [=] {
 						reportItem(itemId);
-					});
+					}, &st::menuIconReport);
 				}
 			}
 			addSelectMessageAction(item, false);
 			if (isUponSelected != -2 && blockSender) {
 				_menu->addAction(tr::lng_profile_block_user(tr::now), [=] {
 					blockSenderItem(itemId);
-				});
+				}, &st::menuIconBlock);
 			}
 		}
 	} else { // maybe cursor on some text history item?
@@ -1977,7 +2009,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					((isUponSelected > 1)
 						? tr::lng_context_copy_selected_items(tr::now)
 						: tr::lng_context_copy_selected(tr::now)),
-					[=] { copySelectedText(); });
+					[=] { copySelectedText(); },
+					&st::menuIconCopy);
 			}
 			addItemActions(item, item);
 			addSearchAction();
@@ -1991,15 +2024,16 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						if (document->sticker()->set) {
 							_menu->addAction(document->isStickerSetInstalled() ? tr::lng_context_pack_info(tr::now) : tr::lng_context_pack_add(tr::now), [=] {
 								showStickerPackInfo(document);
-							});
-							_menu->addAction(session->data().stickers().isFaved(document) ? tr::lng_faved_stickers_remove(tr::now) : tr::lng_faved_stickers_add(tr::now), [=] {
+							}, &st::menuIconStickers);
+							const auto isFaved = session->data().stickers().isFaved(document);
+							_menu->addAction(isFaved ? tr::lng_faved_stickers_remove(tr::now) : tr::lng_faved_stickers_add(tr::now), [=] {
 								Api::ToggleFavedSticker(document, itemId);
-							});
+							}, isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 						}
 						if (!hasCopyRestriction(item)) {
 							_menu->addAction(tr::lng_context_save_image(tr::now), App::LambdaDelayed(st::defaultDropdownMenu.menu.ripple.hideDuration, this, [=] {
 								saveDocumentToFile(itemId, document);
-							}));
+							}), &st::menuIconDownload);
 						}
 					}
 				}
@@ -2014,13 +2048,13 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						const auto phone = contact->phoneNumber;
 						_menu->addAction(tr::lng_profile_copy_phone(tr::now), [=] {
 							QGuiApplication::clipboard()->setText(phone);
-						});
+						}, &st::menuIconCopy);
 					}
 				}
 				if (item->isSponsored()) {
 					_menu->addAction(tr::lng_sponsored_title({}), [=] {
 						_controller->show(Box(Ui::AboutSponsoredBox));
-					});
+					}, &st::menuIconInfo);
 				}
 				if (!item->isService()
 					&& view
@@ -2029,7 +2063,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					&& (view->hasVisibleText() || mediaHasTextForCopy)) {
 					_menu->addAction(tr::lng_context_copy_text(tr::now), [=] {
 						copyContextText(itemId);
-					});
+					}, &st::menuIconCopy);
 				}
 			}
 		}
@@ -2042,25 +2076,26 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				actionText,
 				[text = link->copyToClipboardText()] {
 					QGuiApplication::clipboard()->setText(text);
-				});
+				},
+				&st::menuIconCopy);
 			Forkgram::FillUrlWithCustomUri(
 				_menu.get(),
 				link->copyToClipboardText());
 		} else if (item && item->hasDirectLink() && isUponSelected != 2 && isUponSelected != -2) {
 			_menu->addAction(item->history()->peer->isMegagroup() ? tr::lng_context_copy_message_link(tr::now) : tr::lng_context_copy_post_link(tr::now), [=] {
 				HistoryView::CopyPostLink(session, itemId, HistoryView::Context::History);
-			});
+			}, &st::menuIconLink);
 		}
 		if (isUponSelected > 1) {
 			if (selectedState.count > 0 && selectedState.count == selectedState.canForwardCount) {
 				_menu->addAction(tr::lng_context_forward_selected(tr::now), [=] {
 					_widget->forwardSelected();
-				});
+				}, &st::menuIconForward);
 			}
 			if (selectedState.count > 0 && selectedState.count == selectedState.canDeleteCount) {
 				_menu->addAction(tr::lng_context_delete_selected(tr::now), [=] {
 					_widget->confirmDeleteSelected();
-				});
+				}, &st::menuIconDelete);
 			}
 			if (selectedState.count > 1 && selectedState.count <= 10) {
 				_menu->addAction(
@@ -2069,20 +2104,20 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}
 			_menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 				_widget->clearSelected();
-			});
+			}, &st::menuIconSelect);
 		} else if (item && ((isUponSelected != -2 && (canForward || canDelete)) || item->isRegular())) {
 			if (isUponSelected != -2) {
 				if (canForward) {
 					_menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
 						forwardAsGroup(itemId);
-					});
+					}, &st::menuIconForward);
 				}
 				if (canDelete) {
 					const auto callback = [=] {
 						deleteAsGroup(itemId);
 					};
 					if (item->isUploading()) {
-						_menu->addAction(tr::lng_context_cancel_upload(tr::now), callback);
+						_menu->addAction(tr::lng_context_cancel_upload(tr::now), callback, &st::menuIconCancel);
 					} else {
 						_menu->addAction(Ui::DeleteMessageContextAction(
 							_menu->menu(),
@@ -2094,18 +2129,26 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (!canBlockSender && canReport) {
 					_menu->addAction(tr::lng_context_report_msg(tr::now), [=] {
 						reportAsGroup(itemId);
-					});
+					}, &st::menuIconReport);
 				}
 			}
 			addSelectMessageAction(item);
 			if (isUponSelected != -2 && canBlockSender) {
 				_menu->addAction(tr::lng_profile_block_user(tr::now), [=] {
 					blockSenderAsGroup(itemId);
-				});
+				}, &st::menuIconBlock);
 			}
 		} else if (App::mousedItem()) {
 			addSelectMessageAction(App::mousedItem()->data());
 		}
+	}
+
+	if (hasWhoReactedItem) {
+		HistoryView::AddWhoReactedAction(
+			_menu,
+			this,
+			_dragStateItem,
+			_controller);
 	}
 
 	if (_menu->empty()) {
@@ -2703,6 +2746,7 @@ void HistoryInner::enterEventHook(QEnterEvent *e) {
 }
 
 void HistoryInner::leaveEventHook(QEvent *e) {
+	_reactionsManager->updateButton({});
 	if (auto item = App::hoveredItem()) {
 		repaintItem(item);
 		App::hoveredItem(nullptr);
@@ -2814,13 +2858,13 @@ bool HistoryInner::canCopySelected() const {
 }
 
 bool HistoryInner::canDeleteSelected() const {
-	auto selectedState = getSelectionState();
-	return (selectedState.count > 0) && (selectedState.count == selectedState.canDeleteCount);
+	const auto selectedState = getSelectionState();
+	return (selectedState.count > 0)
+		&& (selectedState.count == selectedState.canDeleteCount);
 }
 
 bool HistoryInner::inSelectionMode() const {
-	if (!_selected.empty()
-		&& (_selected.begin()->second == FullSelection)) {
+	if (hasSelectedItems()) {
 		return true;
 	} else if (_mouseAction == MouseAction::Selecting
 		&& _dragSelFrom
@@ -2922,6 +2966,11 @@ void HistoryInner::elementStartInteraction(not_null<const Element*> view) {
 	_controller->emojiInteractions().startOutgoing(view);
 }
 
+void HistoryInner::elementShowSpoilerAnimation() {
+	_spoilerOpacity.stop();
+	_spoilerOpacity.start([=] { update(); }, 0., 1., st::fadeWrapDuration);
+}
+
 auto HistoryInner::getSelectionState() const
 -> HistoryView::TopBarWidget::SelectedState {
 	auto result = HistoryView::TopBarWidget::SelectedState {};
@@ -2949,10 +2998,14 @@ void HistoryInner::clearSelected(bool onlyTextSelection) {
 	}
 }
 
+bool HistoryInner::hasSelectedItems() const {
+	return !_selected.empty() && _selected.cbegin()->second == FullSelection;
+}
+
 MessageIdsList HistoryInner::getSelectedItems() const {
 	using namespace ranges;
 
-	if (_selected.empty() || _selected.cbegin()->second != FullSelection) {
+	if (!hasSelectedItems()) {
 		return {};
 	}
 
@@ -2979,6 +3032,28 @@ void HistoryInner::onTouchSelect() {
 	mouseActionStart(_touchPos, Qt::LeftButton);
 }
 
+auto HistoryInner::reactionButtonParameters(
+	not_null<const Element*> view,
+	QPoint position,
+	const HistoryView::TextState &reactionState) const
+-> HistoryView::Reactions::ButtonParameters {
+	const auto top = itemTop(view);
+	if (top < 0
+		|| !view->data()->canReact()
+		|| _mouseAction == MouseAction::Dragging
+		|| inSelectionMode()) {
+		return {};
+	}
+	auto result = view->reactionButtonParameters(
+		position,
+		reactionState
+	).translated({ 0, itemTop(view) });
+	result.visibleTop = _visibleAreaTop;
+	result.visibleBottom = _visibleAreaBottom;
+	result.globalPointer = _mousePosition;
+	return result;
+}
+
 void HistoryInner::mouseActionUpdate() {
 	if (hasPendingResizedItems()) {
 		return;
@@ -2987,19 +3062,27 @@ void HistoryInner::mouseActionUpdate() {
 	auto mousePos = mapFromGlobal(_mousePosition);
 	auto point = _widget->clampMousePosition(mousePos);
 
-	auto block = (HistoryBlock*)nullptr;
-	auto item = (HistoryItem*)nullptr;
-	auto view = (Element*)nullptr;
 	QPoint m;
 
 	adjustCurrent(point.y());
-	if (_curHistory && !_curHistory->isEmpty()) {
-		block = _curHistory->blocks[_curBlock].get();
-		view = block->messages[_curItem].get();
-		item = view->data();
-
+	const auto reactionState = _reactionsManager->buttonTextState(point);
+	const auto reactionItem = session().data().message(reactionState.itemId);
+	const auto reactionView = reactionItem
+		? reactionItem->mainView()
+		: nullptr;
+	const auto view = reactionView
+		? reactionView
+		: (_curHistory && !_curHistory->isEmpty())
+		? _curHistory->blocks[_curBlock]->messages[_curItem].get()
+		: nullptr;
+	const auto item = view ? view->data().get() : nullptr;
+	if (view) {
 		App::mousedItem(view);
 		m = mapPointToItem(point, view);
+		_reactionsManager->updateButton(reactionButtonParameters(
+			view,
+			m,
+			reactionState));
 		if (view->pointState(m) != PointState::Outside) {
 			if (App::hoveredItem() != view) {
 				repaintItem(App::hoveredItem());
@@ -3010,6 +3093,8 @@ void HistoryInner::mouseActionUpdate() {
 			repaintItem(App::hoveredItem());
 			App::hoveredItem(nullptr);
 		}
+	} else {
+		_reactionsManager->updateButton({});
 	}
 	if (_mouseActionItem && !_mouseActionItem->mainView()) {
 		mouseActionCancel();
@@ -3021,7 +3106,11 @@ void HistoryInner::mouseActionUpdate() {
 		&& (view == App::hoveredItem())
 		&& !_selected.empty()
 		&& (_selected.cbegin()->second != FullSelection);
-	if (point.y() < _historyPaddingTop) {
+	const auto overReaction = reactionView && reactionState.link;
+	if (overReaction) {
+		dragState = reactionState;
+		lnkhost = reactionView;
+	} else if (point.y() < _historyPaddingTop) {
 		if (_botAbout && !_botAbout->info->text.isEmpty() && _botAbout->height > 0) {
 			dragState = TextState(nullptr, _botAbout->info->text.getState(
 				point - _botAbout->rect.topLeft() - QPoint(st::msgPadding.left(), st::msgPadding.top() + st::botDescSkip + st::msgNameFont->height),
@@ -3831,6 +3920,12 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 				Instance->elementStartInteraction(view);
 			}
 		}
+		void elementShowSpoilerAnimation() override {
+			if (Instance) {
+				Instance->elementShowSpoilerAnimation();
+			}
+		}
+
 	};
 
 	static Result result;

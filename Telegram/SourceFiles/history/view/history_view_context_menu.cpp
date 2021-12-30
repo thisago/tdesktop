@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_attached_stickers.h"
 #include "api/api_editing.h"
 #include "api/api_polls.h"
+#include "api/api_who_reacted.h"
 #include "api/api_toggling_media.h" // Api::ToggleFavedSticker
 #include "base/unixtime.h"
 #include "history/view/history_view_list_widget.h"
@@ -23,10 +24,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_schedule_box.h"
 #include "history/view/media/history_view_media.h"
 #include "history/view/media/history_view_web_page.h"
+#include "history/view/reactions/message_reactions_list.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
 #include "ui/controls/delete_message_context_action.h"
+#include "ui/controls/who_reacted_context_action.h"
 #include "ui/boxes/report_box.h"
 #include "ui/ui_utility.h"
 #include "chat_helpers/send_context_menu.h"
@@ -55,6 +58,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "apiwrap.h"
 #include "facades.h"
+#include "styles/style_chat.h"
+#include "styles/style_menu_icons.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
@@ -139,13 +144,14 @@ void AddPhotoActions(
 			App::LambdaDelayed(
 				st::defaultDropdownMenu.menu.ripple.hideDuration,
 				&photo->session(),
-				[=] { SavePhotoToFile(photo); }));
+				[=] { SavePhotoToFile(photo); }),
+			&st::menuIconSaveImage);
 		menu->addAction(tr::lng_context_copy_image(tr::now), [=] {
 			const auto item = photo->owner().message(contextId);
 			if (!list->showCopyRestriction(item)) {
 				CopyImage(photo);
 			}
-		});
+		}, &st::menuIconCopy);
 	}
 	if (photo->hasAttachedStickers()) {
 		const auto controller = list->controller();
@@ -155,7 +161,8 @@ void AddPhotoActions(
 		};
 		menu->addAction(
 			tr::lng_context_attached_stickers(tr::now),
-			std::move(callback));
+			std::move(callback),
+			&st::menuIconStickers);
 	}
 }
 
@@ -220,7 +227,8 @@ void AddSaveDocumentAction(
 		App::LambdaDelayed(
 			st::defaultDropdownMenu.menu.ripple.hideDuration,
 			&document->session(),
-			save));
+			save),
+		&st::menuIconDownload);
 }
 
 void AddDocumentActions(
@@ -231,7 +239,7 @@ void AddDocumentActions(
 	if (document->loading()) {
 		menu->addAction(tr::lng_context_cancel_download(tr::now), [=] {
 			document->cancel();
-		});
+		}, &st::menuIconCancel);
 		return;
 	}
 	const auto contextId = item ? item->fullId() : FullMsgId();
@@ -247,12 +255,12 @@ void AddDocumentActions(
 		if (notAutoplayedGif) {
 			menu->addAction(tr::lng_context_open_gif(tr::now), [=] {
 				OpenGif(list->controller(), contextId);
-			});
+			}, &st::menuIconShowInChat);
 		}
 		if (document->isGifv() && !list->hasCopyRestriction(item)) {
 			menu->addAction(tr::lng_context_save_gif(tr::now), [=] {
 				SaveGif(list->controller(), contextId);
-			});
+			}, &st::menuIconGif);
 		}
 	}
 	if (document->sticker() && document->sticker()->set) {
@@ -260,19 +268,23 @@ void AddDocumentActions(
 			(document->isStickerSetInstalled()
 				? tr::lng_context_pack_info(tr::now)
 				: tr::lng_context_pack_add(tr::now)),
-			[=] { ShowStickerPackInfo(document, list); });
+			[=] { ShowStickerPackInfo(document, list); },
+			&st::menuIconStickers);
+		const auto isFaved = document->owner().stickers().isFaved(document);
 		menu->addAction(
-			(document->owner().stickers().isFaved(document)
+			(isFaved
 				? tr::lng_faved_stickers_remove(tr::now)
 				: tr::lng_faved_stickers_add(tr::now)),
-			[=] { ToggleFavedSticker(document, contextId); });
+			[=] { ToggleFavedSticker(document, contextId); },
+			isFaved ? &st::menuIconUnfave : &st::menuIconFave);
 	}
 	if (!document->filepath(true).isEmpty()) {
 		menu->addAction(
 			(Platform::IsMac()
 				? tr::lng_context_show_in_finder(tr::now)
 				: tr::lng_context_show_in_folder(tr::now)),
-			[=] { ShowInFolder(document); });
+			[=] { ShowInFolder(document); },
+			&st::menuIconShowInFolder);
 	}
 	if (document->hasAttachedStickers()) {
 		const auto controller = list->controller();
@@ -282,7 +294,8 @@ void AddDocumentActions(
 		};
 		menu->addAction(
 			tr::lng_context_attached_stickers(tr::now),
-			std::move(callback));
+			std::move(callback),
+			&st::menuIconStickers);
 	}
 	AddSaveDocumentAction(menu, item, document, list);
 }
@@ -308,7 +321,8 @@ void AddPostLinkAction(
 		(item->history()->peer->isMegagroup()
 			? tr::lng_context_copy_message_link
 			: tr::lng_context_copy_post_link)(tr::now),
-		[=] { CopyPostLink(session, itemId, context); });
+		[=] { CopyPostLink(session, itemId, context); },
+		&st::menuIconLink);
 }
 
 MessageIdsList ExtractIdsList(const SelectedItems &items) {
@@ -341,7 +355,7 @@ bool AddForwardSelectedAction(
 			request.navigation,
 			ExtractIdsList(request.selectedItems),
 			callback);
-	});
+	}, &st::menuIconForward);
 	return true;
 }
 
@@ -373,7 +387,7 @@ bool AddForwardMessageAction(
 					? owner->itemOrItsGroup(item)
 					: MessageIdsList{ 1, itemId }));
 		}
-	});
+	}, &st::menuIconForward);
 	return true;
 }
 
@@ -421,7 +435,7 @@ bool AddSendNowSelectedAction(
 			history,
 			ExtractIdsList(request.selectedItems),
 			callback);
-	});
+	}, &st::menuIconSend);
 	return true;
 }
 
@@ -454,7 +468,7 @@ bool AddSendNowMessageAction(
 					? owner->itemOrItsGroup(item)
 					: MessageIdsList{ 1, itemId }));
 		}
-	});
+	}, &st::menuIconSend);
 	return true;
 }
 
@@ -545,7 +559,7 @@ bool AddRescheduleAction(
 				box->closeBox();
 			}
 		}, box->lifetime());
-	});
+	}, &st::menuIconReschedule);
 	return true;
 }
 
@@ -569,7 +583,7 @@ bool AddReplyToMessageAction(
 			return;
 		}
 		list->replyToMessageRequestNotify(item->fullId());
-	});
+	}, &st::menuIconReply);
 	return true;
 }
 
@@ -600,7 +614,7 @@ bool AddViewRepliesAction(
 	const auto history = item->history();
 	menu->addAction(phrase, crl::guard(controller, [=] {
 		controller->showRepliesForMessage(history, rootId);
-	}));
+	}), &st::menuIconViewReplies);
 	return true;
 }
 
@@ -623,7 +637,7 @@ bool AddEditMessageAction(
 			return;
 		}
 		list->editMessageRequestNotify(item->fullId());
-	});
+	}, &st::menuIconEdit);
 	return true;
 }
 
@@ -650,7 +664,7 @@ bool AddPinMessageAction(
 	const auto controller = list->controller();
 	menu->addAction(isPinned ? tr::lng_context_unpin_msg(tr::now) : tr::lng_context_pin_msg(tr::now), crl::guard(controller, [=] {
 		Window::ToggleMessagePinned(controller, pinItemId, !isPinned);
-	}));
+	}), isPinned ? &st::menuIconUnpin : &st::menuIconPin);
 	return true;
 }
 
@@ -673,7 +687,7 @@ bool AddGoToMessageAction(
 		if (item) {
 			goToMessageClickHandler(item)->onClick(ClickContext{});
 		}
-	}));
+	}), &st::menuIconShowInChat);
 	return true;
 }
 
@@ -705,7 +719,7 @@ bool AddDeleteSelectedAction(
 			list->cancelSelection();
 		}));
 		request.navigation->parentController()->show(std::move(box));
-	});
+	}, &st::menuIconDelete);
 	return true;
 }
 
@@ -754,7 +768,8 @@ bool AddDeleteMessageAction(
 	if (item->isUploading()) {
 		menu->addAction(
 			tr::lng_context_cancel_upload(tr::now),
-			callback);
+			callback,
+			&st::menuIconCancel);
 		return true;
 	}
 	menu->addAction(Ui::DeleteMessageContextAction(
@@ -797,7 +812,10 @@ void AddReportAction(
 					: MessageIdsList{ 1, itemId }));
 		}
 	});
-	menu->addAction(tr::lng_context_report_msg(tr::now), callback);
+	menu->addAction(
+		tr::lng_context_report_msg(tr::now),
+		callback,
+		&st::menuIconReport);
 }
 
 bool AddClearSelectionAction(
@@ -809,7 +827,7 @@ bool AddClearSelectionAction(
 	}
 	menu->addAction(tr::lng_context_clear_selection(tr::now), [=] {
 		list->cancelSelection();
-	});
+	}, &st::menuIconSelect);
 	return true;
 }
 
@@ -837,7 +855,7 @@ bool AddSelectMessageAction(
 				list->selectItem(item);
 			}
 		}
-	});
+	}, &st::menuIconSelect);
 	return true;
 }
 
@@ -887,7 +905,8 @@ void AddCopyLinkAction(
 	const auto text = link->copyToClipboardText();
 	menu->addAction(
 		action,
-		[=] { QGuiApplication::clipboard()->setText(text); });
+		[=] { QGuiApplication::clipboard()->setText(text); },
+		&st::menuIconCopy);
 
 	Forkgram::FillUrlWithCustomUri(menu, text);
 }
@@ -902,8 +921,6 @@ ContextMenuRequest::ContextMenuRequest(
 base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 		not_null<ListWidget*> list,
 		const ContextMenuRequest &request) {
-	auto result = base::make_unique_q<Ui::PopupMenu>(list);
-
 	const auto link = request.link;
 	const auto view = request.view;
 	const auto item = request.item;
@@ -920,6 +937,11 @@ base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 		: nullptr;
 	const auto hasSelection = !request.selectedItems.empty()
 		|| !request.selectedText.empty();
+	const auto hasWhoReactedItem = item && Api::WhoReactedExists(item);
+
+	auto result = base::make_unique_q<Ui::PopupMenu>(
+		list,
+		hasWhoReactedItem ? st::whoReadMenu : st::popupMenuWithIcons);
 
 	if (request.overSelection && !list->hasCopyRestrictionForSelected()) {
 		const auto text = request.selectedItems.empty()
@@ -929,7 +951,7 @@ base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 			if (!list->showCopyRestrictionForSelected()) {
 				TextUtilities::SetClipboardText(list->getSelectedText());
 			}
-		});
+		}, &st::menuIconCopy);
 	}
 
 	AddTopMessageActions(result, request, list);
@@ -962,12 +984,17 @@ base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 						TextUtilities::SetClipboardText(HistoryItemText(item));
 					}
 				}
-			});
+			}, &st::menuIconCopy);
 		}
 	}
 
 	AddCopyLinkAction(result, link);
 	AddMessageActions(result, request, list);
+
+	if (hasWhoReactedItem) {
+		AddWhoReactedAction(result, list, item, list->controller());
+	}
+
 	return result;
 }
 
@@ -1038,13 +1065,44 @@ void AddPollActions(
 	if (poll->voted() && !poll->quiz()) {
 		menu->addAction(tr::lng_polls_retract(tr::now), [=] {
 			poll->session().api().polls().sendVotes(itemId, {});
-		});
+		}, &st::menuIconRetractVote);
 	}
 	if (item->canStopPoll()) {
 		menu->addAction(tr::lng_polls_stop(tr::now), [=] {
 			StopPoll(&poll->session(), itemId);
-		});
+		}, &st::menuIconStopPoll);
 	}
+}
+
+void AddWhoReactedAction(
+		not_null<Ui::PopupMenu*> menu,
+		not_null<QWidget*> context,
+		not_null<HistoryItem*> item,
+		not_null<Window::SessionController*> controller) {
+	const auto participantChosen = [=](uint64 id) {
+		controller->showPeerInfo(PeerId(id));
+	};
+	const auto weak = Ui::MakeWeak(menu.get());
+	const auto showAllChosen = [=, itemId = item->fullId()]{
+		// Pressing on an item that has a submenu doesn't hide it :(
+		if (const auto strong = weak.data()) {
+			strong->hideMenu();
+		}
+		if (const auto item = controller->session().data().message(itemId)) {
+			controller->window().show(ReactionsListBox(
+				controller,
+				item,
+				QString()));
+		}
+	};
+	if (!menu->empty()) {
+		menu->addSeparator();
+	}
+	menu->addAction(Ui::WhoReactedContextAction(
+		menu.get(),
+		Api::WhoReacted(item, context, st::defaultWhoRead),
+		participantChosen,
+		showAllChosen));
 }
 
 void ShowReportItemsBox(not_null<PeerData*> peer, MessageIdsList ids) {
