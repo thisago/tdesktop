@@ -516,7 +516,9 @@ void EditCaptionBox::setupEmojiPanel() {
 	};
 	_emojiFilter.reset(base::install_event_filter(container, filterCallback));
 
+	if (!Core::App().settings().fork().emojiPopupOnClick()) {
 	_emojiToggle->installEventFilter(_emojiPanel);
+	}
 	_emojiToggle->addClickHandler([=] {
 		_emojiPanel->toggleAnimated();
 	});

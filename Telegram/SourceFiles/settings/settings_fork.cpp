@@ -395,6 +395,14 @@ void SetupForkContent(
 			Core::App().saveSettingsDelayed();
 		});
 
+	//
+	addRestart(
+		tr::lng_settings_emoji_on_click(tr::now),
+		[] { return Core::App().settings().fork().emojiPopupOnClick(); },
+		[=](bool checked) {
+			Core::App().settings().fork().setEmojiPopupOnClick(checked);
+		});
+
 }
 
 void SetupFork(

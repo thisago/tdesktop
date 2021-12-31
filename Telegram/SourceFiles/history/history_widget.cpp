@@ -963,9 +963,21 @@ void HistoryWidget::initVoiceRecordBar() {
 void HistoryWidget::initTabbedSelector() {
 	refreshTabbedPanel();
 
+	if (!Core::App().settings().fork().emojiPopupOnClick()) {
 	_tabbedSelectorToggle->addClickHandler([=] {
 		toggleTabbedSelectorMode();
 	});
+	} else {
+		_tabbedSelectorToggle->clicks(
+		) | rpl::start_with_next([=](Qt::MouseButton button) {
+			if (button == Qt::LeftButton) {
+				_tabbedPanel->toggleAnimated();
+			} else if (button == Qt::RightButton) {
+				toggleTabbedSelectorMode();
+			}
+		}, lifetime());
+		_tabbedSelectorToggle->setAcceptBoth(true);
+	}
 
 	const auto selector = controller()->tabbedSelector();
 
@@ -4370,7 +4382,9 @@ void HistoryWidget::createTabbedPanel() {
 void HistoryWidget::setTabbedPanel(std::unique_ptr<TabbedPanel> panel) {
 	_tabbedPanel = std::move(panel);
 	if (const auto raw = _tabbedPanel.get()) {
-		_tabbedSelectorToggle->installEventFilter(raw);
+		if (!Core::App().settings().fork().emojiPopupOnClick()) {
+			_tabbedSelectorToggle->installEventFilter(raw);
+		}
 		_tabbedSelectorToggle->setColorOverrides(nullptr, nullptr, nullptr);
 	} else {
 		_tabbedSelectorToggle->setColorOverrides(

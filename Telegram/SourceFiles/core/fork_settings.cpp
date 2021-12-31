@@ -40,7 +40,9 @@ QByteArray ForkSettings::serialize() const {
 			<< qint32(_customStickerSize)
 			<< qint32(_useBlackTrayIcon ? 1 : 0)
 			<< qint32(_useOriginalTrayIcon ? 1 : 0)
-			<< qint32(_autoSubmitPasscode ? 1 : 0);
+			<< qint32(_autoSubmitPasscode ? 1 : 0)
+			<< qint32(_emojiPopupOnClick ? 1 : 0)
+			;
 	}
 	return result;
 }
@@ -65,6 +67,7 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 	qint32 useBlackTrayIcon = _useBlackTrayIcon;
 	qint32 useOriginalTrayIcon = _useOriginalTrayIcon;
 	qint32 autoSubmitPasscode = _autoSubmitPasscode;
+	qint32 emojiPopupOnClick = _emojiPopupOnClick;
 
 	if (!stream.atEnd()) {
 		stream
@@ -79,7 +82,9 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 			>> customStickerSize
 			>> useBlackTrayIcon
 			>> useOriginalTrayIcon
-			>> autoSubmitPasscode;
+			>> autoSubmitPasscode
+			>> emojiPopupOnClick
+			;
 	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
@@ -100,6 +105,7 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 	_useBlackTrayIcon = (useBlackTrayIcon == 1);
 	_useOriginalTrayIcon = (useOriginalTrayIcon == 1);
 	_autoSubmitPasscode = (autoSubmitPasscode == 1);
+	_emojiPopupOnClick = (emojiPopupOnClick == 1);
 }
 
 void ForkSettings::resetOnLastLogout() {
@@ -114,6 +120,7 @@ void ForkSettings::resetOnLastLogout() {
 	_customStickerSize = kDefaultStickerSize;
 	_useOriginalTrayIcon = false;
 	_autoSubmitPasscode = false;
+	_emojiPopupOnClick = false;
 }
 
 } // namespace Core

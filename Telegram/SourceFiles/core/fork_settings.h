@@ -86,6 +86,12 @@ public:
 	void setAutoSubmitPasscode(bool newValue) {
 		_autoSubmitPasscode = newValue;
 	}
+	[[nodiscard]] bool emojiPopupOnClick() const {
+		return _emojiPopupOnClick;
+	}
+	void setEmojiPopupOnClick(bool newValue) {
+		_emojiPopupOnClick = newValue;
+	}
 
 private:
 	bool _squareUserpics = false;
@@ -100,6 +106,7 @@ private:
 	bool _useBlackTrayIcon = false;
 	bool _useOriginalTrayIcon = false;
 	bool _autoSubmitPasscode = false;
+	bool _emojiPopupOnClick = false;
 
 };
 
