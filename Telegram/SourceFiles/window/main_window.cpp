@@ -59,6 +59,9 @@ const QImage &LogoForkgramNoMargin() {
 }
 
 const QImage &GetForkIconOr(const QImage &l) {
+	if (!Core::IsAppLaunched()) {
+		return l;
+	}
 	const auto isSquare = Core::App().settings().fork().squareUserpics();
 	const auto isOriginal =
 		Core::App().settings().fork().useOriginalTrayIcon();
@@ -131,7 +134,8 @@ void ConvertIconToBlack(QImage &image) {
 QIcon CreateOfficialIcon(Main::Session *session) {
 	auto image = Logo();
 	if ((session && session->supportMode())
-		|| Core::App().settings().fork().useBlackTrayIcon()) {
+		|| (Core::IsAppLaunched()
+			&& Core::App().settings().fork().useBlackTrayIcon())) {
 		ConvertIconToBlack(image);
 	}
 	return QIcon(Ui::PixmapFromImage(std::move(image)));
