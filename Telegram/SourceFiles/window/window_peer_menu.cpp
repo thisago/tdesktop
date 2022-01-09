@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item.h"
 #include "history/history_message.h" // GetErrorTextForSending.
 #include "history/view/history_view_context_menu.h"
+#include "history/view/history_view_scheduled_section.h"
 #include "window/window_adaptive.h" // Adaptive::isThreeColumn
 #include "window/window_session_controller.h"
 #include "window/window_controller.h"
@@ -154,6 +155,7 @@ private:
 	void addDeleteContact();
 
 	void addGoToFirstMessage();
+	void addGoToScheduled();
 
 	void addChatActions(not_null<ChatData*> chat);
 	void addChannelActions(not_null<ChannelData*> channel);
@@ -666,6 +668,17 @@ void Filler::addGoToFirstMessage() {
 		nullptr);
 }
 
+void Filler::addGoToScheduled() {
+	if (!_peer->canWrite()) {
+		return;
+	}
+	const auto history = _peer->owner().historyLoaded(_peer);
+	_addAction(tr::lng_scheduled_messages({}), [=, controller = _controller] {
+		controller->showSection(
+			std::make_shared<HistoryView::ScheduledMemento>(history));
+	}, nullptr);
+}
+
 void Filler::addManageChat() {
 	if (!EditPeerInfoBox::Available(_peer)) {
 		return;
@@ -772,6 +785,7 @@ void Filler::fillHistoryActions() {
 	addDeleteChat();
 	addLeaveChat();
 	addGoToFirstMessage();
+	addGoToScheduled();
 }
 
 void Filler::fillProfileActions() {
@@ -789,6 +803,7 @@ void Filler::fillProfileActions() {
 	addLeaveChat();
 	addDeleteContact();
 	addGoToFirstMessage();
+	addGoToScheduled();
 }
 
 void Filler::fillRepliesActions() {
