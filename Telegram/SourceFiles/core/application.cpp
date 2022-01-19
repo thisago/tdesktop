@@ -293,7 +293,7 @@ void Application::run() {
 	// Depend on activeWindow() for now :(
 	startShortcuts();
 	startDomain();
-	style::SetSquareUserpics(_settings.fork().squareUserpics());
+	style::SetSquareUserpics(settings().fork().squareUserpics());
 
 	_primaryWindow->widget()->show();
 
