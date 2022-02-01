@@ -592,9 +592,7 @@ bool AutostartSkip() {
 }
 
 bool TrayIconSupported() {
-	return App::wnd()
-		? App::wnd()->trayAvailable()
-		: false;
+	return QSystemTrayIcon::isSystemTrayAvailable();
 }
 
 bool SkipTaskbarSupported() {
@@ -710,7 +708,7 @@ void start() {
 	Gio::init();
 
 	Glib::set_prgname(cExeName().toStdString());
-	Glib::set_application_name(std::string(AppName));
+	Glib::set_application_name(std::string(AppNameF));
 
 #ifdef DESKTOP_APP_USE_PACKAGED_RLOTTIE
 	g_warning(

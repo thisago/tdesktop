@@ -3,7 +3,6 @@ Author: 23rd.
 */
 #include "settings/settings_fork.h"
 
-#include "app.h"
 #include "base/qthelp_url.h"
 #include "base/weak_ptr.h"
 #include "boxes/abstract_box.h"
@@ -238,7 +237,7 @@ void SetupForkContent(
 			[=] {
 				ok();
 				Core::App().saveSettingsDelayed(0);
-				App::restart();
+				Core::Restart();
 			},
 			[=] {
 				cancel();

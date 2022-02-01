@@ -240,7 +240,8 @@ QByteArray Settings::serialize() const {
 			<< qint32(_closeToTaskbar.current() ? 1 : 0)
 			<< _customDeviceModel.current()
 			<< qint32(_playerRepeatMode.current())
-			<< qint32(_playerOrderMode.current());
+			<< qint32(_playerOrderMode.current())
+			<< qint32(_macWarnBeforeQuit ? 1 : 0);
 	}
 	return result;
 }
@@ -340,6 +341,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	QString customDeviceModel = _customDeviceModel.current();
 	qint32 playerRepeatMode = static_cast<qint32>(_playerRepeatMode.current());
 	qint32 playerOrderMode = static_cast<qint32>(_playerOrderMode.current());
+	qint32 macWarnBeforeQuit = _macWarnBeforeQuit ? 1 : 0;
 
 	stream >> themesAccentColors;
 	if (!stream.atEnd()) {
@@ -521,6 +523,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 			>> playerRepeatMode
 			>> playerOrderMode;
 	}
+	if (!stream.atEnd()) {
+		stream >> macWarnBeforeQuit;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for Core::Settings::constructFromSerialized()"));
@@ -689,6 +694,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	case Media::Player::OrderMode::Reverse:
 	case Media::Player::OrderMode::Shuffle: _playerOrderMode = uncheckedPlayerOrderMode; break;
 	}
+	_macWarnBeforeQuit = macWarnBeforeQuit ? 1 : 0;
 }
 
 QString Settings::getSoundPath(const QString &key) const {

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_item_components.h"
 
+#include "base/qt/qt_key_modifiers.h"
 #include "base/unixtime.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
@@ -54,7 +55,7 @@ void HistoryMessageVia::create(
 		tr::lng_inline_bot_via(tr::now, lt_inline_bot, '@' + bot->username));
 	link = std::make_shared<LambdaClickHandler>([bot = this->bot](
 			ClickContext context) {
-		if (QGuiApplication::keyboardModifiers() == Qt::ControlModifier) {
+		if (base::IsCtrlPressed()) {
 			if (const auto window = App::wnd()) {
 				if (const auto controller = window->sessionController()) {
 					controller->showPeerInfo(bot);
@@ -348,16 +349,15 @@ void HistoryMessageReply::paint(
 			if (hasPreview) {
 				if (const auto image = replyToMsg->media()->replyPreview()) {
 					auto to = style::rtlrect(x + st::msgReplyBarSkip, y + st::msgReplyPadding.top() + st::msgReplyBarPos.y(), st::msgReplyBarSize.height(), st::msgReplyBarSize.height(), w + 2 * x);
-					auto previewWidth = image->width() / cIntRetinaFactor();
-					auto previewHeight = image->height() / cIntRetinaFactor();
-					auto preview = image->pixSingle(
-						previewWidth,
-						previewHeight,
-						to.width(),
-						to.height(),
-						ImageRoundRadius::Small,
-						RectPart::AllCorners,
-						context.selected() ? &st->msgStickerOverlay() : nullptr);
+					const auto preview = image->pixSingle(
+						image->size() / style::DevicePixelRatio(),
+						{
+							.colored = (context.selected()
+								? &st->msgStickerOverlay()
+								: nullptr),
+							.options = Images::Option::RoundSmall,
+							.outer = to.size(),
+						});
 					p.drawPixmap(to.x(), to.y(), preview);
 				}
 			}

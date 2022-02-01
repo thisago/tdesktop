@@ -63,7 +63,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/random.h"
 #include "base/unixtime.h"
 #include "base/qt_signal_producer.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_common_adapters.h"
 #include "base/event_filter.h"
 #include "main/main_account.h"
 #include "main/main_domain.h" // Domain::activeSessionValue.
@@ -147,9 +147,9 @@ QWidget *PipDelegate::pipParentWidget() {
 }
 
 [[nodiscard]] Images::Options VideoThumbOptions(DocumentData *document) {
-	const auto result = Images::Option::Smooth | Images::Option::Blurred;
+	const auto result = Images::Option::Blur;
 	return (document && document->isVideoMessage())
-		? (result | Images::Option::Circled)
+		? (result | Images::Option::RoundCircle)
 		: result;
 }
 
@@ -611,6 +611,7 @@ Streaming::FrameWithInfo OverlayWidget::videoFrameWithInfo() const {
 			.original = _streamed->instance.info().video.cover,
 			.format = Streaming::FrameFormat::ARGB32,
 			.index = -2,
+			.alpha = _streamed->instance.info().video.alpha,
 		};
 }
 
@@ -656,7 +657,9 @@ bool OverlayWidget::opaqueContentShown() const {
 	return contentShown()
 		&& (!_staticContentTransparent
 			|| !_document
-			|| (!_document->isVideoMessage() && !_document->sticker()));
+			|| (!_document->isVideoMessage()
+				&& !_document->sticker()
+				&& (!_streamed || !_streamed->instance.info().video.alpha)));
 }
 
 void OverlayWidget::clearStreaming(bool savePosition) {
@@ -2453,9 +2456,9 @@ void OverlayWidget::displayDocument(
 			if (const auto image = _documentMedia->getStickerLarge()) {
 				setStaticContent(image->original());
 			} else if (const auto thumbnail = _documentMedia->thumbnail()) {
-				setStaticContent(thumbnail->pixBlurred(
-					_document->dimensions.width(),
-					_document->dimensions.height()
+				setStaticContent(thumbnail->pix(
+					_document->dimensions,
+					{ .options = Images::Option::Blur }
 				).toImage());
 			}
 		} else {
@@ -2712,10 +2715,8 @@ void OverlayWidget::initStreamingThumbnail() {
 	} else if (size.isEmpty()) {
 		return;
 	}
-	const auto w = size.width();
-	const auto h = size.height();
 	const auto options = VideoThumbOptions(_document);
-	const auto goodOptions = (options & ~Images::Option::Blurred);
+	const auto goodOptions = (options & ~Images::Option::Blur);
 	setStaticContent((good
 		? good
 		: thumbnail
@@ -2723,11 +2724,11 @@ void OverlayWidget::initStreamingThumbnail() {
 		: blurred
 		? blurred
 		: Image::BlankMedia().get())->pixNoCache(
-			w,
-			h,
-			good ? goodOptions : options,
-			w / cIntRetinaFactor(),
-			h / cIntRetinaFactor()
+			size,
+			{
+				.options = good ? goodOptions : options,
+				.outer = size / style::DevicePixelRatio(),
+			}
 		).toImage());
 }
 
@@ -3271,10 +3272,8 @@ void OverlayWidget::validatePhotoImage(Image *image, bool blurred) {
 	const auto use = flipSizeByRotation({ _width, _height })
 		* cIntRetinaFactor();
 	setStaticContent(image->pixNoCache(
-		use.width(),
-		use.height(),
-		Images::Option::Smooth
-		| (blurred ? Images::Option::Blurred : Images::Option(0))
+		use,
+		{ .options = (blurred ? Images::Option::Blur : Images::Option()) }
 	).toImage());
 	_blurred = blurred;
 }

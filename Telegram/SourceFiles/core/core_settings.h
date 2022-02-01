@@ -664,6 +664,13 @@ public:
 		return _playerOrderMode.changes();
 	}
 
+	void setMacWarnBeforeQuit(bool value) {
+		_macWarnBeforeQuit = value;
+	}
+	[[nodiscard]] bool macWarnBeforeQuit() const {
+		return _macWarnBeforeQuit;
+	}
+
 	[[nodiscard]] static bool ThirdColumnByDefault();
 	[[nodiscard]] static float64 DefaultDialogsWidthRatio();
 	[[nodiscard]] static qint32 SerializePlaybackSpeed(float64 speed) {
@@ -769,6 +776,7 @@ private:
 	rpl::variable<QString> _customDeviceModel;
 	rpl::variable<Media::Player::RepeatMode> _playerRepeatMode;
 	rpl::variable<Media::Player::OrderMode> _playerOrderMode;
+	bool _macWarnBeforeQuit = true;
 
 	bool _tabbedReplacedWithInfo = false; // per-window
 	rpl::event_stream<bool> _tabbedReplacedWithInfoValue; // per-window

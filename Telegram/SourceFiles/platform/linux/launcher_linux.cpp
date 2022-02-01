@@ -77,7 +77,7 @@ void Launcher::initHook() {
 
 			return qsl("appimagekit_%1-%2.desktop").arg(
 				md5Hash,
-				AppName.utf16().replace(' ', '_'));
+				AppNameF.utf16().replace(' ', '_'));
 		}
 
 		return qsl(QT_STRINGIFY(TDESKTOP_LAUNCHER_BASENAME) ".desktop");
