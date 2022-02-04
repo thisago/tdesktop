@@ -1562,7 +1562,11 @@ void ComposeControls::initTabbedSelector() {
 
 	if (!Core::App().settings().fork().emojiPopupOnClick()) {
 	_tabbedSelectorToggle->addClickHandler([=] {
-		toggleTabbedSelectorMode();
+		if (_tabbedPanel && _tabbedPanel->isHidden()) {
+			_tabbedPanel->showAnimated();
+		} else {
+			toggleTabbedSelectorMode();
+		}
 	});
 	} else {
 		_tabbedSelectorToggle->clicks(
