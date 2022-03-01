@@ -231,18 +231,20 @@ void SetupForkContent(
 	};
 
 	const auto restartBox = [=](Fn<void()> ok, Fn<void()> cancel) {
-		Ui::show(Box<Ui::ConfirmBox>(
-			tr::lng_settings_need_restart(tr::now),
-			tr::lng_settings_restart_now(tr::now),
-			[=] {
-				ok();
-				Core::App().saveSettingsDelayed(0);
-				Core::Restart();
-			},
-			[=] {
-				cancel();
+		controller->show(
+			Ui::MakeConfirmBox({
+				.text = tr::lng_settings_need_restart(tr::now),
+				.confirmed = [=] {
+					ok();
+					Core::App().saveSettingsDelayed(0);
+					Core::Restart();
+				},
+				.cancelled = [=] {
+					cancel();
+				},
+				.confirmText = tr::lng_settings_restart_now(tr::now)
 			}),
-		Ui::LayerOption::KeepOther);
+			Ui::LayerOption::KeepOther);
 	};
 	const auto addRestart = [&](
 			const QString &label,
@@ -344,6 +346,7 @@ void SetupForkContent(
 
 #ifndef Q_OS_LINUX
 #ifdef Q_OS_WIN
+	AddDivider(inner);
 	add(
 		tr::lng_settings_use_black_tray_icon(tr::now),
 		Core::App().settings().fork().useBlackTrayIcon(),
@@ -353,6 +356,7 @@ void SetupForkContent(
 			Core::App().domain().notifyUnreadBadgeChanged();
 		});
 #else // !Q_OS_WIN
+	AddDivider(inner);
 	addRestart(
 		tr::lng_settings_use_black_tray_icon(tr::now),
 		[] { return Core::App().settings().fork().useBlackTrayIcon(); },
@@ -368,13 +372,13 @@ void SetupForkContent(
 			Core::App().settings().fork().setUseOriginalTrayIcon(checked);
 		});
 #endif // !Q_OS_LINUX
+	AddDivider(inner);
 
 	AddButton(
-		container,
+		inner,
 		tr::lng_settings_custom_sticker_size(),
-		st::settingsChatButton,
-		&st::settingsIconStickers,
-		st::settingsChatIconLeft
+		st::settingsButton,
+		{ &st::settingsIconStickers, kIconLightOrange }
 	)->addClickHandler([=] {
 		Ui::show(Box<StickerSizeBox>([=](bool isSuccess) {
 			if (isSuccess) {
@@ -401,6 +405,8 @@ void SetupForkContent(
 		[=](bool checked) {
 			Core::App().settings().fork().setEmojiPopupOnClick(checked);
 		});
+
+	AddDivider(inner);
 
 }
 
