@@ -271,7 +271,7 @@ void ShareBox::prepareCommentField() {
 				_show,
 				_descriptor.session,
 				field,
-				_descriptor.stComment));
+				_descriptor.stLabel));
 	}
 	field->setSubmitSettings(Core::App().settings().sendSubmitWay());
 
@@ -538,7 +538,7 @@ void ShareBox::showMenu(not_null<Ui::RpWidget*> parent) {
 		[=] { submitScheduled(); });
 	const auto success = (result == SendMenu::FillMenuResult::Success);
 	if (_descriptor.forwardOptions.show || success) {
-		_menu->setForcedOrigin(Ui::PanelAnimation::Origin::BottomRight);
+		_menu->setForcedVerticalOrigin(Ui::PopupMenu::VerticalOrigin::Bottom);
 		_menu->popup(QCursor::pos());
 	}
 }

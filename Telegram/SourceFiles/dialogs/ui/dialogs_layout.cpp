@@ -822,7 +822,6 @@ void RowPainter::paint(
 	const auto unreadCount = entry->chatListUnreadCount();
 	const auto unreadMark = entry->chatListUnreadMark();
 	const auto unreadMuted = entry->chatListMutedBadge();
-	const auto mentionOrReactionMuted = (entry->folder() != nullptr);
 	const auto item = entry->chatListMessage();
 	const auto cloudDraft = [&]() -> const Data::Draft*{
 		if (history && (!item || (!unreadCount && !unreadMark))) {
@@ -853,6 +852,8 @@ void RowPainter::paint(
 	const auto displayReactionBadge = !displayMentionBadge
 		&& history
 		&& history->unreadReactions().has();
+	const auto mentionOrReactionMuted = (entry->folder() != nullptr)
+		|| (!displayMentionBadge && unreadMuted);
 	const auto displayUnreadCounter = [&] {
 		if (displayMentionBadge
 			&& unreadCount == 1
