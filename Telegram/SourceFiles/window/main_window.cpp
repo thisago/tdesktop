@@ -990,7 +990,7 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 	const auto nowMinimumWidth = computeMinWidth();
 	const auto firstResize = (nowMinimumWidth < wasMinimumWidth);
 	if (firstResize) {
-		setMinimumWidth(nowMinimumWidth);
+		updateMinimumSize();
 	}
 	if (!isMaximized()) {
 		tryToExtendWidthBy(wasWidth + nowRightWidth - wasRightWidth - width());
@@ -998,7 +998,7 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 		updateControlsGeometry();
 	}
 	if (!firstResize) {
-		setMinimumWidth(nowMinimumWidth);
+		updateMinimumSize();
 	}
 }
 
