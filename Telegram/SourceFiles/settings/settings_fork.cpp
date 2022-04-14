@@ -432,6 +432,10 @@ Fork::Fork(QWidget *parent, SessionController controller)
 	setupContent(controller);
 }
 
+rpl::producer<QString> Fork::title() {
+	return tr::lng_settings_section_fork();
+}
+
 void Fork::setupContent(SessionController controller) {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 

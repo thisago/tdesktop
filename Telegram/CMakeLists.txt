@@ -135,10 +135,14 @@ PRIVATE
     api/api_media.h
     api/api_messages_search.cpp
     api/api_messages_search.h
+    api/api_messages_search_merged.cpp
+    api/api_messages_search_merged.h
     api/api_peer_photo.cpp
     api/api_peer_photo.h
     api/api_polls.cpp
     api/api_polls.h
+    api/api_ringtones.cpp
+    api/api_ringtones.h
     api/api_self_destruct.cpp
     api/api_self_destruct.h
     api/api_send_progress.cpp
@@ -167,6 +171,8 @@ PRIVATE
     boxes/filters/edit_filter_box.h
     boxes/filters/edit_filter_chats_list.cpp
     boxes/filters/edit_filter_chats_list.h
+    boxes/peers/add_bot_to_chat_box.cpp
+    boxes/peers/add_bot_to_chat_box.h
     boxes/peers/add_participants_box.cpp
     boxes/peers/add_participants_box.h
     boxes/peers/edit_contact_box.cpp
@@ -216,6 +222,8 @@ PRIVATE
     boxes/background_preview_box.h
     boxes/change_phone_box.cpp
     boxes/change_phone_box.h
+    boxes/choose_filter_box.cpp
+    boxes/choose_filter_box.h
     boxes/connection_box.cpp
     boxes/connection_box.h
     boxes/create_poll_box.cpp
@@ -252,6 +260,10 @@ PRIVATE
     boxes/phone_banned_box.h
     boxes/pin_messages_box.cpp
     boxes/pin_messages_box.h
+    boxes/reactions_settings_box.cpp
+    boxes/reactions_settings_box.h
+    boxes/ringtones_box.cpp
+    boxes/ringtones_box.h
     boxes/self_destruction_box.cpp
     boxes/self_destruction_box.h
     boxes/send_files_box.cpp
@@ -399,6 +411,10 @@ PRIVATE
     core/version.h
     countries/countries_manager.cpp
     countries/countries_manager.h
+    data/notify/data_notify_settings.cpp
+    data/notify/data_notify_settings.h
+    data/notify/data_peer_notify_settings.cpp
+    data/notify/data_peer_notify_settings.h
     data/stickers/data_stickers_set.cpp
     data/stickers/data_stickers_set.h
     data/stickers/data_stickers.cpp
@@ -462,8 +478,6 @@ PRIVATE
     data/data_message_reactions.cpp
     data/data_message_reactions.h
     data/data_msg_id.h
-    data/data_notify_settings.cpp
-    data/data_notify_settings.h
     data/data_peer.cpp
     data/data_peer.h
     data/data_peer_id.cpp
@@ -654,6 +668,8 @@ PRIVATE
     history/view/history_view_pinned_section.h
     history/view/history_view_pinned_tracker.cpp
     history/view/history_view_pinned_tracker.h
+    history/view/history_view_quick_action.cpp
+    history/view/history_view_quick_action.h
     history/view/history_view_react_animation.cpp
     history/view/history_view_react_animation.h
     history/view/history_view_react_button.cpp
@@ -771,6 +787,8 @@ PRIVATE
     info/profile/info_profile_widget.h
     info/settings/info_settings_widget.cpp
     info/settings/info_settings_widget.h
+    inline_bots/bot_attach_web_view.cpp
+    inline_bots/bot_attach_web_view.h
     inline_bots/inline_bot_layout_internal.cpp
     inline_bots/inline_bot_layout_internal.h
     inline_bots/inline_bot_layout_item.cpp
@@ -898,8 +916,12 @@ PRIVATE
     media/view/media_view_playback_progress.cpp
     media/view/media_view_playback_progress.h
     media/view/media_view_open_common.h
+    menu/menu_mute.cpp
+    menu/menu_mute.h
     menu/menu_send.cpp
     menu/menu_send.h
+    menu/menu_ttl_validator.cpp
+    menu/menu_ttl_validator.h
     mtproto/config_loader.cpp
     mtproto/config_loader.h
     mtproto/connection_abstract.cpp
@@ -1077,6 +1099,7 @@ PRIVATE
     settings/settings_privacy_controllers.h
     settings/settings_privacy_security.cpp
     settings/settings_privacy_security.h
+    settings/settings_type.h
     storage/details/storage_file_utilities.cpp
     storage/details/storage_file_utilities.h
     storage/details/storage_settings_scheme.cpp
@@ -1292,6 +1315,8 @@ PRIVATE
     qrc/emoji_6.qrc
     qrc/emoji_7.qrc
     qrc/emoji_preview.qrc
+    qrc/telegram/animations.qrc
+    qrc/telegram/export.qrc
     qrc/telegram/telegram.qrc
     qrc/telegram/sounds.qrc
     winrc/Telegram.rc

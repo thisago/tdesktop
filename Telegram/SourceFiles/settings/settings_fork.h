@@ -7,9 +7,11 @@ Author: 23rd.
 
 namespace Settings {
 
-class Fork : public Section {
+class Fork : public Section<Fork> {
 public:
 	Fork(QWidget *parent, not_null<Window::SessionController*> controller);
+
+	[[nodiscard]] rpl::producer<QString> title() override;
 
 private:
 	void setupContent(not_null<Window::SessionController*> controller);
