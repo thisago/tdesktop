@@ -239,8 +239,9 @@ void SetupForkContent(
 					Core::App().saveSettingsDelayed(0);
 					Core::Restart();
 				},
-				.cancelled = [=] {
+				.cancelled = [=](Fn<void()> &&close) {
 					cancel();
+					close();
 				},
 				.confirmText = tr::lng_settings_restart_now(tr::now)
 			}),

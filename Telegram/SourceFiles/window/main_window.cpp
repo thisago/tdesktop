@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "mainwidget.h" // session->content()->windowShown().
 #include "facades.h"
+#include "tray.h"
 #include "styles/style_widgets.h"
 #include "styles/style_window.h"
 
@@ -539,9 +540,6 @@ void MainWindow::handleActiveChanged() {
 	if (isActiveWindow()) {
 		Core::App().checkMediaViewActivation();
 	}
-	InvokeQueued(this, [=] {
-		handleActiveChangedHook();
-	});
 }
 
 void MainWindow::handleVisibleChanged(bool visible) {
@@ -813,16 +811,6 @@ void MainWindow::setPositionInited() {
 	_positionInited = true;
 }
 
-void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
-	icon->setToolTip(AppNameF.utf16());
-	connect(icon, &QSystemTrayIcon::activated, this, [=](
-			QSystemTrayIcon::ActivationReason reason) {
-		Core::Sandbox::Instance().customEnterFromEventLoop([&] {
-			handleTrayIconActication(reason);
-		});
-	});
-}
-
 rpl::producer<> MainWindow::leaveEvents() const {
 	return _leaveEvents.events();
 }
@@ -860,6 +848,7 @@ void MainWindow::updateUnreadCounter() {
 	const auto counter = Core::App().unreadBadge();
 	setTitle((counter > 0) ? qsl("Telegram (%1)").arg(counter) : qsl("Telegram"));
 
+	Core::App().tray().updateIconCounters();
 	unreadCounterChangedHook();
 }
 
@@ -943,14 +932,13 @@ void MainWindow::savePosition(Qt::WindowState state) {
 }
 
 bool MainWindow::minimizeToTray() {
-	if (Core::Quitting() || !hasTrayIcon()) {
+	if (Core::Quitting()/* || !hasTrayIcon()*/) {
 		return false;
 	}
 
 	closeWithoutDestroy();
 	controller().updateIsActiveBlur();
 	updateGlobalMenu();
-	showTrayTooltip();
 	return true;
 }
 
