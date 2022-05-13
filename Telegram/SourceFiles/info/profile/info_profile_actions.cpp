@@ -547,7 +547,7 @@ void ActionsFiller::addInviteToGroupAction(
 		InviteToChatButton(user) | rpl::filter(notEmpty),
 		InviteToChatButton(user) | rpl::map(notEmpty),
 		[=] { AddBotToGroupBoxController::Start(user); },
-		&st::infoIconRequests);
+		&st::infoIconAddMember);
 	const auto about = _wrap->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			_wrap.data(),
@@ -737,7 +737,7 @@ void ActionsFiller::addJoinChannelAction(
 		tr::lng_profile_join_channel(),
 		rpl::duplicate(joinVisible),
 		[=] { channel->session().api().joinChannel(channel); },
-		&st::infoIconRequests);
+		&st::infoIconAddMember);
 	_wrap->add(object_ptr<Ui::SlideWrap<Ui::FixedHeightWidget>>(
 		_wrap,
 		CreateSkipWidget(
