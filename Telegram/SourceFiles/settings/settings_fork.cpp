@@ -7,6 +7,7 @@ Author: 23rd.
 #include "base/weak_ptr.h"
 #include "boxes/abstract_box.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "core/file_utilities.h"
 #include "facades.h"
 #include "lang/lang_keys.h"

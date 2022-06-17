@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload.
         if: (github.event_name == 'release')
-        uses: svenstaro/upload-release-action@v1-release
+        uses: svenstaro/upload-release-action@2.3.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ./Telegram.tar.xz

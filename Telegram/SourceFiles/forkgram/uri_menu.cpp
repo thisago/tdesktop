@@ -6,6 +6,7 @@ Author: 23rd.
 
 #include "forkgram/uri_open.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "lang/lang_keys.h"
 #include "ui/widgets/popup_menu.h"
 

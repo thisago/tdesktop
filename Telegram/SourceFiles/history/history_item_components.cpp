@@ -114,6 +114,20 @@ HiddenSenderInfo::HiddenSenderInfo(const QString &name, bool external)
 	}
 }
 
+ClickHandlerPtr HiddenSenderInfo::ForwardClickHandler() {
+	static const auto hidden = std::make_shared<LambdaClickHandler>([](
+			ClickContext context) {
+		const auto my = context.other.value<ClickHandlerContext>();
+		const auto weak = my.sessionWindow;
+		if (const auto strong = weak.get()) {
+			Ui::Toast::Show(
+				Window::Show(strong).toastParent(),
+				tr::lng_forwarded_hidden(tr::now));
+		}
+	});
+	return hidden;
+}
+
 bool HiddenSenderInfo::paintCustomUserpic(
 		Painter &p,
 		int x,
@@ -208,15 +222,12 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 				QLocale::system().dateTimeFormat(QLocale::ShortFormat)));
 	}
 	text.setMarkedText(st::fwdTextStyle, phrase);
-	static const auto hidden = std::make_shared<LambdaClickHandler>([] {
-		Ui::Toast::Show(tr::lng_forwarded_hidden(tr::now));
-	});
 
 	text.setLink(1, fromChannel
 		? goToMessageClickHandler(originalSender, originalId)
 		: originalSender
 		? originalSender->openLink()
-		: hidden);
+		: HiddenSenderInfo::ForwardClickHandler());
 	if (via) {
 		text.setLink(2, via->link);
 	}
@@ -350,7 +361,11 @@ void HistoryMessageReply::updateName(
 		not_null<HistoryMessage*> holder) const {
 	if (const auto name = replyToFromName(holder); !name.isEmpty()) {
 		replyToName.setText(st::fwdTextStyle, name, Ui::NameTextOptions());
-		replyToVersion = replyToMsg->author()->nameVersion;
+		if (const auto from = replyToFrom(holder)) {
+			replyToVersion = from->nameVersion;
+		} else {
+			replyToVersion = replyToMsg->author()->nameVersion;
+		}
 		bool hasPreview = replyToMsg->media() ? replyToMsg->media()->hasReplyPreview() : false;
 		int32 previewSkip = hasPreview ? (st::msgReplyBarSize.height() + st::msgReplyBarSkip - st::msgReplyBarSize.width() - st::msgReplyBarPos.x()) : 0;
 		int32 w = replyToName.maxWidth();
@@ -942,4 +957,24 @@ void HistoryDocumentVoice::startSeeking() {
 void HistoryDocumentVoice::stopSeeking() {
 	_seeking = false;
 	Media::Player::instance()->cancelSeeking(AudioMsgId::Type::Voice);
+}
+
+bool HistoryDocumentVoice::seeking() const {
+	return _seeking;
+}
+
+float64 HistoryDocumentVoice::seekingStart() const {
+	return _seekingStart / kFloatToIntMultiplier;
+}
+
+void HistoryDocumentVoice::setSeekingStart(float64 seekingStart) const {
+	_seekingStart = qRound(seekingStart * kFloatToIntMultiplier);
+}
+
+float64 HistoryDocumentVoice::seekingCurrent() const {
+	return _seekingCurrent / kFloatToIntMultiplier;
+}
+
+void HistoryDocumentVoice::setSeekingCurrent(float64 seekingCurrent) {
+	_seekingCurrent = qRound(seekingCurrent * kFloatToIntMultiplier);
 }

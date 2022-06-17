@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_domain.h"
 
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "core/shortcuts.h"
 #include "core/crash_reports.h"
 #include "main/main_account.h"
@@ -22,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/localstorage.h"
 #include "export/export_settings.h"
 #include "window/notifications_manager.h"
+#include "data/data_peer_values.h" // Data::AmPremiumValue.
 #include "facades.h"
 
 namespace Main {
@@ -140,6 +142,27 @@ const std::vector<Domain::AccountWithIndex> &Domain::accounts() const {
 	return _accounts;
 }
 
+std::vector<not_null<Account*>> Domain::orderedAccounts() const {
+	const auto order = Core::App().settings().accountsOrder();
+	auto accounts = ranges::views::all(
+		_accounts
+	) | ranges::views::transform([](const Domain::AccountWithIndex &a) {
+		return not_null{ a.account.get() };
+	}) | ranges::to_vector;
+	ranges::stable_sort(accounts, [&](
+			not_null<Account*> a,
+			not_null<Account*> b) {
+		const auto aIt = a->sessionExists()
+			? ranges::find(order, a->session().uniqueId())
+			: end(order);
+		const auto bIt = b->sessionExists()
+			? ranges::find(order, b->session().uniqueId())
+			: end(order);
+		return aIt < bIt;
+	});
+	return accounts;
+}
+
 rpl::producer<> Domain::accountsChanges() const {
 	return _accountsChanges.events();
 }
@@ -236,9 +259,7 @@ void Domain::scheduleUpdateUnreadBadge() {
 
 not_null<Main::Account*> Domain::add(MTP::Environment environment) {
 	Expects(started());
-#ifdef FORKGRAM_LIMIT_ACCOUNTS
-	Expects(_accounts.size() < kMaxAccounts);
-#endif // FORKGRAM_LIMIT_ACCOUNTS
+	Expects(_accounts.size() < kPremiumMaxAccounts);
 
 	static const auto cloneConfig = [](const MTP::Config &config) {
 		return std::make_unique<MTP::Config>(config);
@@ -285,8 +306,7 @@ not_null<Main::Account*> Domain::add(MTP::Environment environment) {
 }
 
 void Domain::addActivated(MTP::Environment environment) {
-#ifdef FORKGRAM_LIMIT_ACCOUNTS
-	if (accounts().size() < Main::Domain::kMaxAccounts) {
+	if (accounts().size() < maxAccounts()) {
 		activate(add(environment));
 	} else {
 		for (auto &[index, account] : accounts()) {
@@ -297,9 +317,6 @@ void Domain::addActivated(MTP::Environment environment) {
 			}
 		}
 	}
-#else
-	activate(add(environment));
-#endif // FORKGRAM_LIMIT_ACCOUNTS
 }
 
 void Domain::watchSession(not_null<Account*> account) {
@@ -310,6 +327,12 @@ void Domain::watchSession(not_null<Account*> account) {
 		session->data().unreadBadgeChanges(
 		) | rpl::start_with_next([=] {
 			scheduleUpdateUnreadBadge();
+		}, session->lifetime());
+
+		Data::AmPremiumValue(
+			session
+		) | rpl::start_with_next([=] {
+			_lastMaxAccounts = maxAccounts();
 		}, session->lifetime());
 	}, account->lifetime());
 
@@ -442,6 +465,18 @@ void Domain::scheduleWriteAccounts() {
 		_writeAccountsScheduled = false;
 		_local->writeAccounts();
 	});
+}
+
+int Domain::maxAccounts() const {
+	const auto premiumCount = ranges::count_if(accounts(), [](
+			const Main::Domain::AccountWithIndex &d) {
+		return d.account->sessionExists() && d.account->session().premium();
+	});
+	return std::min(int(premiumCount) + kMaxAccounts, kPremiumMaxAccounts);
+}
+
+rpl::producer<int> Domain::maxAccountsChanges() const {
+	return _lastMaxAccounts.changes();
 }
 
 } // namespace Main

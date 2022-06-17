@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_drafts.h"
 #include "data/data_session.h"
 #include "dialogs/dialogs_list.h"
+#include "dialogs/ui/dialogs_video_userpic.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_window.h"
 #include "storage/localstorage.h"
@@ -35,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_folder.h"
 #include "data/data_peer_values.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 
 namespace Dialogs::Ui {
 namespace {
@@ -308,6 +310,7 @@ enum class Flag {
 	SavedMessages    = 0x08,
 	RepliesMessages  = 0x10,
 	AllowUserOnline  = 0x20,
+	VideoPaused      = 0x40,
 };
 inline constexpr bool is_flag_type(Flag) { return true; }
 
@@ -317,6 +320,7 @@ void paintRow(
 		not_null<const BasicRow*> row,
 		not_null<Entry*> entry,
 		Dialogs::Key chat,
+		VideoUserpic *videoUserpic,
 		FilterId filterId,
 		PeerData *from,
 		const HiddenSenderInfo *hiddenSenderInfo,
@@ -367,10 +371,12 @@ void paintRow(
 		row->paintUserpic(
 			p,
 			from,
+			videoUserpic,
 			(flags & Flag::AllowUserOnline) ? history : nullptr,
 			ms,
 			active,
-			fullWidth);
+			fullWidth,
+			(flags & Flag::VideoPaused));
 	} else if (hiddenSenderInfo) {
 		hiddenSenderInfo->emptyUserpic.paint(
 			p,
@@ -457,13 +463,13 @@ void paintRow(
 		if (!ShowSendActionInDialogs(history)
 			|| !history->sendActionPainter()->paint(p, nameleft, texttop, availableWidth, fullWidth, color, ms)) {
 			if (history->cloudDraftTextCache.isEmpty()) {
-				auto draftWrapped = Ui::Text::PlainLink(
+				auto draftWrapped = Text::PlainLink(
 					tr::lng_dialogs_text_from_wrapped(
 						tr::now,
 						lt_from,
 						tr::lng_from_draft(tr::now)));
 				auto draftText = supportMode
-					? Ui::Text::PlainLink(
+					? Text::PlainLink(
 						Support::ChatOccupiedString(history))
 					: tr::lng_dialogs_text_with_from(
 						tr::now,
@@ -471,7 +477,7 @@ void paintRow(
 						draftWrapped,
 						lt_message,
 						{ .text = draft->textWithTags.text },
-						Ui::Text::WithEntities);
+						Text::WithEntities);
 				history->cloudDraftTextCache.setMarkedText(
 					st::dialogsTextStyle,
 					draftText,
@@ -584,6 +590,11 @@ void paintRow(
 					: selected
 					? &st::dialogsVerifiedIconOver
 					: &st::dialogsVerifiedIcon),
+				(active
+					? &st::dialogsPremiumIconActive
+					: selected
+					? &st::dialogsPremiumIconOver
+					: &st::dialogsPremiumIcon),
 				(active
 					? &st::dialogsScamFgActive
 					: selected
@@ -811,11 +822,13 @@ QRect PaintUnreadBadge(
 void RowPainter::paint(
 		Painter &p,
 		not_null<const Row*> row,
+		VideoUserpic *videoUserpic,
 		FilterId filterId,
 		int fullWidth,
 		bool active,
 		bool selected,
-		crl::time ms) {
+		crl::time ms,
+		bool paused) {
 	const auto entry = row->entry();
 	const auto history = row->history();
 	const auto peer = history ? history->peer.get() : nullptr;
@@ -885,7 +898,8 @@ void RowPainter::paint(
 		| (selected ? Flag::Selected : Flag(0))
 		| (allowUserOnline ? Flag::AllowUserOnline : Flag(0))
 		| (peer && peer->isSelf() ? Flag::SavedMessages : Flag(0))
-		| (peer && peer->isRepliesChat() ? Flag::RepliesMessages : Flag(0));
+		| (peer && peer->isRepliesChat() ? Flag::RepliesMessages : Flag(0))
+		| (paused ? Flag::VideoPaused : Flag(0));
 	const auto paintItemCallback = [&](int nameleft, int namewidth) {
 		const auto texttop = st::dialogsPadding.y()
 			+ st::msgNameFont->height
@@ -955,6 +969,7 @@ void RowPainter::paint(
 		row,
 		entry,
 		row->key(),
+		videoUserpic,
 		filterId,
 		from,
 		nullptr,
@@ -1088,6 +1103,7 @@ void RowPainter::paint(
 		row,
 		history,
 		history,
+		nullptr,
 		FilterId(),
 		from,
 		hiddenSenderInfo,
