@@ -117,6 +117,7 @@ TopBarWidget::TopBarWidget(
 	_menuToggle->setClickedCallback([=] { showPeerMenu(); });
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
 	_back->addClickHandler([=] { backClicked(); });
+	_back->setAcceptBoth();
 	_cancelChoose->setClickedCallback(
 		[=] { _cancelChooseForReport.fire({}); });
 

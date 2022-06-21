@@ -538,7 +538,22 @@ void Widget::setupSupportMode() {
 }
 
 void Widget::setupMainMenuToggle() {
-	_mainMenuToggle->setClickedCallback([=] { showMainMenu(); });
+	_mainMenuToggle->setAcceptBoth();
+	_mainMenuToggle->addClickHandler([=](Qt::MouseButton button) {
+		if (button == Qt::LeftButton) {
+			showMainMenu();
+		} else if (button == Qt::MiddleButton) {
+			const auto folder = session().data().folderLoaded(
+				Data::Folder::kId);
+			if (folder && !folder->chatsList()->empty()) {
+				controller()->openFolder(folder);
+			}
+		} else if (button == Qt::RightButton) {
+			controller()->content()->choosePeer(
+				session().userPeerId(),
+				ShowAtUnreadMsgId);
+		}
+	});
 
 	rpl::single(rpl::empty) | rpl::then(
 		controller()->filtersMenuChanged()
