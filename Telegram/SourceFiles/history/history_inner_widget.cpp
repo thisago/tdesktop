@@ -1225,6 +1225,9 @@ HistoryInner::VideoUserpic *HistoryInner::validateVideoUserpic(
 		return i->second.get();
 	}
 	const auto repaint = [=] {
+		if (hasPendingResizedItems()) {
+			return;
+		}
 		enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
 			// stop the enumeration if the userpic is below the painted rect
 			if (userpicTop >= _visibleAreaBottom) {

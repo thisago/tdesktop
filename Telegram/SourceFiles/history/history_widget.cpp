@@ -757,8 +757,10 @@ HistoryWidget::HistoryWidget(
 		if (flags & PeerUpdateFlag::UnavailableReason) {
 			const auto unavailable = _peer->computeUnavailableReason();
 			if (!unavailable.isEmpty()) {
-				controller->showBackFromStack();
-				controller->show(Ui::MakeInformBox(unavailable));
+				closeCurrent();
+				if (const auto primary = Core::App().primaryWindow()) {
+					primary->show(Ui::MakeInformBox(unavailable));
+				}
 				return;
 			}
 		}
@@ -1627,6 +1629,12 @@ void HistoryWidget::fieldChanged() {
 	updateSendButtonType();
 	if (!HasSendText(_field)) {
 		_previewState = Data::PreviewState::Allowed;
+		_fieldIsEmpty = true;
+	} else if (_fieldIsEmpty) {
+		_fieldIsEmpty = false;
+		if (_kbShown) {
+			toggleKeyboard();
+		}
 	}
 	if (updateCmdStartShown()) {
 		updateControlsVisibility();
@@ -2956,13 +2964,21 @@ void HistoryWidget::unreadCountUpdated() {
 	if (_history->chatListUnreadMark()) {
 		crl::on_main(this, [=, history = _history] {
 			if (history == _history) {
-				controller()->showBackFromStack();
+				closeCurrent();
 				_cancelRequests.fire({});
 			}
 		});
 	} else {
 		updateHistoryDownVisibility();
 		_historyDown.widget->setUnreadCount(_history->chatListUnreadCount());
+	}
+}
+
+void HistoryWidget::closeCurrent() {
+	if (controller()->isPrimary()) {
+		controller()->showBackFromStack();
+	} else {
+		controller()->window().close();
 	}
 }
 
@@ -2975,13 +2991,15 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		|| error.type() == qstr("CHANNEL_PUBLIC_GROUP_NA")
 		|| error.type() == qstr("USER_BANNED_IN_CHANNEL")) {
 		auto was = _peer;
-		controller()->showBackFromStack();
-		Ui::ShowMultilineToast({
-			.parentOverride = Window::Show(controller()).toastParent(),
-			.text = { (was && was->isMegagroup())
-				? tr::lng_group_not_accessible(tr::now)
-				: tr::lng_channel_not_accessible(tr::now) },
-		});
+		closeCurrent();
+		if (const auto primary = Core::App().primaryWindow()) {
+			Ui::ShowMultilineToast({
+				.parentOverride = Window::Show(primary).toastParent(),
+				.text = { (was && was->isMegagroup())
+					? tr::lng_group_not_accessible(tr::now)
+					: tr::lng_channel_not_accessible(tr::now) },
+			});
+		}
 		return;
 	}
 
@@ -2996,7 +3014,7 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		_preloadDownRequest = 0;
 	} else if (_firstLoadRequest == requestId) {
 		_firstLoadRequest = 0;
-		controller()->showBackFromStack();
+		closeCurrent();
 	} else if (_delayedShowAtRequest == requestId) {
 		_delayedShowAtRequest = 0;
 	}
