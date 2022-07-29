@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/unread_badge.h"
 #include "ui/ui_utility.h"
+#include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "support/support_helper.h"
 #include "main/main_session.h"
@@ -182,7 +183,6 @@ int PaintWideCounter(
 		bool unreadMuted,
 		bool mentionOrReactionMuted) {
 	const auto initial = availableWidth;
-	auto hadOneBadge = false;
 	if (displayUnreadCounter || displayUnreadMark) {
 		const auto counter = (unreadCount > 0)
 			? QString::number(unreadCount)
@@ -205,8 +205,6 @@ int PaintWideCounter(
 			unreadTop,
 			st);
 		availableWidth -= badge.width() + st.padding;
-
-		hadOneBadge = true;
 	} else if (displayPinnedIcon) {
 		const auto &icon = active
 			? st::dialogsPinnedIconActive
@@ -219,8 +217,6 @@ int PaintWideCounter(
 			texttop,
 			fullWidth);
 		availableWidth -= icon.width() + st::dialogsUnreadPadding;
-
-		hadOneBadge = true;
 	}
 	if (displayMentionBadge || displayReactionBadge) {
 		const auto counter = QString();
@@ -260,7 +256,7 @@ int PaintWideCounter(
 				: st::dialogsUnreadReaction)).paintInCenter(p, badge);
 		availableWidth -= badge.width()
 			+ st.padding
-			+ (hadOneBadge ? st::dialogsUnreadPadding : 0);
+			+ st::dialogsUnreadPadding;
 	}
 	return availableWidth;
 }
@@ -463,6 +459,7 @@ void paintRow(
 		if (!ShowSendActionInDialogs(history)
 			|| !history->sendActionPainter()->paint(p, nameleft, texttop, availableWidth, fullWidth, color, ms)) {
 			if (history->cloudDraftTextCache.isEmpty()) {
+				using namespace TextUtilities;
 				auto draftWrapped = Text::PlainLink(
 					tr::lng_dialogs_text_from_wrapped(
 						tr::now,
@@ -476,12 +473,23 @@ void paintRow(
 						lt_from_part,
 						draftWrapped,
 						lt_message,
-						{ .text = draft->textWithTags.text },
+						DialogsPreviewText({
+							.text = draft->textWithTags.text,
+							.entities = ConvertTextTagsToEntities(
+								draft->textWithTags.tags),
+						}),
 						Text::WithEntities);
+				const auto context = Core::MarkedTextContext{
+					.session = &history->session(),
+					.customEmojiRepaint = [=] {
+						history->updateChatListEntry();
+					},
+				};
 				history->cloudDraftTextCache.setMarkedText(
 					st::dialogsTextStyle,
 					draftText,
-					DialogTextOptions());
+					DialogTextOptions(),
+					context);
 			}
 			p.setPen(active ? st::dialogsTextFgActive : (selected ? st::dialogsTextFgOver : st::dialogsTextFg));
 			if (supportMode) {

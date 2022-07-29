@@ -9,7 +9,6 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - '!docs/building-linux.md'
       - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
@@ -28,7 +27,6 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-      - '!docs/building-linux.md'
       - 'changelog.txt'
       - 'LEGAL'
       - 'LICENSE'
@@ -87,7 +85,7 @@ jobs:
       - name: First set up.
         run: |
           gcc --version
-          ln -s $LibrariesPath Libraries
+          ln -s /usr/src/Libraries
 
           yum -y install epel-release
           yum -y install wget p7zip

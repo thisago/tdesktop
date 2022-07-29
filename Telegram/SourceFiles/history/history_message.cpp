@@ -332,7 +332,7 @@ HistoryMessage::HistoryMessage(
 	if (const auto media = data.vmedia()) {
 		setMedia(*media);
 	}
-	const auto textWithEntities = TextWithEntities{
+	auto textWithEntities = TextWithEntities{
 		qs(data.vmessage()),
 		Api::EntitiesFromMTP(
 			&history->session(),
@@ -1497,7 +1497,8 @@ void HistoryMessage::setText(const TextWithEntities &textWithEntities) {
 
 	clearIsolatedEmoji();
 	const auto context = Core::MarkedTextContext{
-		.session = &history()->session()
+		.session = &history()->session(),
+		.customEmojiRepaint = [=] { customEmojiRepaint(); },
 	};
 	_text.setMarkedText(
 		st::messageTextStyle,

@@ -160,6 +160,22 @@ void PeerMenuAddMuteSubmenuAction(
 	}
 }
 
+Fn<void()> GoToFirstMessageHandler(
+		not_null<Window::SessionController*> controller,
+		not_null<PeerData*> peer) {
+	const auto weak = base::make_weak(controller.get());
+	const auto jump = [=](const QDate &date) {
+		const auto chat = peer->owner().history(peer->id);
+		const auto open = [=](not_null<PeerData*> peer, MsgId id) {
+			if (const auto strong = weak.get()) {
+				strong->showPeerHistory(peer, SectionShow::Way::Forward, id);
+			}
+		};
+		peer->session().api().resolveJumpToDate(chat, date, open);
+	};
+	return [=] { jump(QDate(2013, 8, 1)); };
+}
+
 class Filler {
 public:
 	Filler(
@@ -203,6 +219,7 @@ private:
 	void addNewMembers();
 	void addDeleteContact();
 	void addTTLSubmenu(bool addSeparator);
+	void addGiftPremium();
 
 	void addGoToFirstMessage();
 	void addGoToScheduled();
@@ -736,7 +753,7 @@ void Filler::addDeleteContact() {
 void Filler::addGoToFirstMessage() {
 	_addAction(
 		QString("Go to first message"),
-		GoToFirstMessageHandler(_peer),
+		GoToFirstMessageHandler(_controller, _peer),
 		nullptr);
 }
 
@@ -828,6 +845,24 @@ void Filler::addTTLSubmenu(bool addSeparator) {
 	}
 }
 
+void Filler::addGiftPremium() {
+	const auto user = _peer->asUser();
+	if (!user
+		|| user->isInaccessible()
+		|| user->isSelf()
+		|| user->isBot()
+		|| user->isNotificationsUser()
+		|| !user->canReceiveGifts()
+		|| user->isRepliesChat()) {
+		return;
+	}
+
+	const auto navigation = _controller;
+	_addAction(tr::lng_profile_gift_premium(tr::now), [=] {
+		navigation->showGiftPremiumBox(user);
+	}, &st::menuIconGiftPremium);
+}
+
 void Filler::fill() {
 	if (_folder) {
 		fillArchiveActions();
@@ -886,6 +921,7 @@ void Filler::fillProfileActions() {
 	addNewContact();
 	addShareContact();
 	addEditContact();
+	addGiftPremium();
 	addBotToGroup();
 	addNewMembers();
 	addManageChat();
@@ -1578,14 +1614,6 @@ Fn<void()> ClearHistoryHandler(
 		controller->show(
 			Box<DeleteMessagesBox>(peer, true),
 			Ui::LayerOption::KeepOther);
-	};
-}
-
-Fn<void()> GoToFirstMessageHandler(not_null<PeerData*> peer) {
-	return [=] {
-		peer->session().api().jumpToDate(
-			peer->owner().history(peer->id),
-			QDate(2013, 8, 1));
 	};
 }
 
