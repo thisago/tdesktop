@@ -742,12 +742,11 @@ bool RepliesWidget::confirmSendingFiles(
 		return false;
 	}
 
-	using SendLimit = SendFilesBox::SendLimit;
 	auto box = Box<SendFilesBox>(
 		controller(),
 		std::move(list),
 		_composeControls->getTextWithAppliedMarkdown(),
-		_history->peer->slowmodeApplied() ? SendLimit::One : SendLimit::Many,
+		_history->peer,
 		Api::SendType::Normal,
 		SendMenu::Type::SilentOnly); // #TODO replies schedule
 
@@ -2049,7 +2048,7 @@ void RepliesWidget::listShowPremiumToast(not_null<DocumentData*> document) {
 	if (!_stickerToast) {
 		_stickerToast = std::make_unique<HistoryView::StickerToast>(
 			controller(),
-			_scroll.get(),
+			this,
 			[=] { _stickerToast = nullptr; });
 	}
 	_stickerToast->showFor(document);

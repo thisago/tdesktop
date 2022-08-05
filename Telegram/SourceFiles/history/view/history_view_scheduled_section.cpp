@@ -400,12 +400,11 @@ bool ScheduledWidget::confirmSendingFiles(
 		return false;
 	}
 
-	using SendLimit = SendFilesBox::SendLimit;
 	auto box = Box<SendFilesBox>(
 		controller(),
 		std::move(list),
 		_composeControls->getTextWithAppliedMarkdown(),
-		_history->peer->slowmodeApplied() ? SendLimit::One : SendLimit::Many,
+		_history->peer,
 		CanScheduleUntilOnline(_history->peer)
 			? Api::SendType::ScheduledToUser
 			: Api::SendType::Scheduled,
@@ -1367,7 +1366,7 @@ void ScheduledWidget::listShowPremiumToast(
 	if (!_stickerToast) {
 		_stickerToast = std::make_unique<HistoryView::StickerToast>(
 			controller(),
-			_scroll.data(),
+			this,
 			[=] { _stickerToast = nullptr; });
 	}
 	_stickerToast->showFor(document);

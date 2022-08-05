@@ -137,8 +137,7 @@ QByteArray Settings::serialize() const {
 		+ sizeof(qint64)
 		+ sizeof(qint32) * 2
 		+ Serialize::bytearraySize(windowPosition)
-		+ sizeof(qint32) * 2
-		+ (_accountsOrder.size() * sizeof(quint64));
+		+ sizeof(qint32);
 	for (const auto &[id, rating] : recentEmojiPreloadData) {
 		size += Serialize::stringSize(id) + sizeof(quint16);
 	}
@@ -152,6 +151,8 @@ QByteArray Settings::serialize() const {
 		+ Serialize::bytearraySize(_photoEditorBrush)
 		+ sizeof(qint32) * 3
 		+ Serialize::stringSize(_customDeviceModel.current())
+		+ sizeof(qint32) * 4
+		+ (_accountsOrder.size() * sizeof(quint64))
 		+ sizeof(qint32) * 4;
 
 	auto result = QByteArray();
@@ -277,7 +278,8 @@ QByteArray Settings::serialize() const {
 		stream
 			<< qint32(0) // old hardwareAcceleratedVideo
 			<< qint32(_chatQuickAction)
-			<< qint32(_hardwareAcceleratedVideo ? 1 : 0);
+			<< qint32(_hardwareAcceleratedVideo ? 1 : 0)
+			<< qint32(_suggestAnimatedEmoji ? 1 : 0);
 	}
 	return result;
 }
@@ -382,6 +384,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	std::vector<uint64> accountsOrder;
 	qint32 hardwareAcceleratedVideo = _hardwareAcceleratedVideo ? 1 : 0;
 	qint32 chatQuickAction = static_cast<qint32>(_chatQuickAction);
+	qint32 suggestAnimatedEmoji = _suggestAnimatedEmoji ? 1 : 0;
 
 	stream >> themesAccentColors;
 	if (!stream.atEnd()) {
@@ -586,6 +589,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	if (!stream.atEnd()) {
 		stream >> hardwareAcceleratedVideo;
 	}
+	if (!stream.atEnd()) {
+		stream >> suggestAnimatedEmoji;
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for Core::Settings::constructFromSerialized()"));
@@ -767,6 +773,7 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 		case Quick::React: _chatQuickAction = uncheckedChatQuickAction; break;
 		}
 	}
+	_suggestAnimatedEmoji = (suggestAnimatedEmoji == 1);
 }
 
 QString Settings::getSoundPath(const QString &key) const {
@@ -1041,6 +1048,7 @@ void Settings::resetOnLastLogout() {
 	_replaceEmoji = true;
 	_suggestEmoji = true;
 	_suggestStickersByEmoji = true;
+	_suggestAnimatedEmoji = true;
 	_spellcheckerEnabled = true;
 	_videoPlaybackSpeed = 1.;
 	_voicePlaybackSpeed = 1.;

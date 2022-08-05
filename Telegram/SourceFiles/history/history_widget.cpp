@@ -413,7 +413,11 @@ HistoryWidget::HistoryWidget(
 
 	InitMessageField(controller, _field, [=](
 			not_null<DocumentData*> document) {
+		if (_peer && Data::AllowEmojiWithoutPremium(_peer)) {
+			return true;
+		}
 		showPremiumToast(document);
+		return false;
 	});
 
 	_keyboard->sendCommandRequests(
@@ -496,10 +500,14 @@ HistoryWidget::HistoryWidget(
 		Unexpected("action in MimeData hook.");
 	});
 
+	const auto allow = [=](const auto&) {
+		return _peer && _peer->isSelf();
+	};
 	const auto suggestions = Ui::Emoji::SuggestionsController::Init(
 		this,
 		_field,
-		&controller->session());
+		&controller->session(),
+		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
 	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 	updateFieldSubmitSettings();
 
@@ -1100,6 +1108,13 @@ void HistoryWidget::initTabbedSelector() {
 		return !isHidden() && !_field->isHidden();
 	}) | rpl::start_with_next([=](Selector::FileChosen data) {
 		Data::InsertCustomEmoji(_field.data(), data.document);
+	}, lifetime());
+
+	selector->premiumEmojiChosen(
+	) | rpl::filter([=] {
+		return !isHidden() && !_field->isHidden();
+	}) | rpl::start_with_next([=](not_null<DocumentData*> document) {
+		showPremiumToast(document);
 	}, lifetime());
 
 	selector->fileChosen(
@@ -3986,6 +4001,7 @@ void HistoryWidget::showAnimated(
 	}
 	_topShadow->setVisible(params.withTopBarShadow ? false : true);
 	_preserveScrollTop = false;
+	_stickerToast = nullptr;
 
 	_cacheOver = controller()->content()->grabForShowAnimation(params);
 
@@ -5023,12 +5039,11 @@ bool HistoryWidget::confirmSendingFiles(
 	const auto position = cursor.position();
 	const auto anchor = cursor.anchor();
 	const auto text = _field->getTextWithTags();
-	using SendLimit = SendFilesBox::SendLimit;
 	auto box = Box<SendFilesBox>(
 		controller(),
 		std::move(list),
 		text,
-		_peer->slowmodeApplied() ? SendLimit::One : SendLimit::Many,
+		_peer,
 		Api::SendType::Normal,
 		sendMenuType());
 	_field->setTextWithTags({});
@@ -6332,7 +6347,7 @@ void HistoryWidget::updatePinnedViewer() {
 	auto [view, offset] = _list->findViewForPinnedTracking(visibleBottom);
 	const auto lessThanId = !view
 		? (ServerMaxMsgId - 1)
-		: (view->data()->history() != _history)
+		: (view->history() != _history)
 		? (view->data()->id + (offset > 0 ? 1 : 0) - ServerMaxMsgId)
 		: (view->data()->id + (offset > 0 ? 1 : 0));
 	const auto lastClickedId = !_pinnedClickedId
@@ -6782,7 +6797,7 @@ void HistoryWidget::showPremiumToast(not_null<DocumentData*> document) {
 	if (!_stickerToast) {
 		_stickerToast = std::make_unique<HistoryView::StickerToast>(
 			controller(),
-			_scroll.data(),
+			this,
 			[=] { _stickerToast = nullptr; });
 	}
 	_stickerToast->showFor(document);
@@ -7557,11 +7572,19 @@ void HistoryWidget::updateForwardingTexts() {
 		}
 
 		if (count < 2) {
-			text = _toForward.items.front()->toPreview({
+			const auto item = _toForward.items.front();
+			text = item->toPreview({
 				.hideSender = true,
 				.hideCaption = !keepCaptions,
 				.generateImages = false,
 			}).text;
+
+			const auto dropCustomEmoji = !session().premium()
+				&& !_peer->isSelf()
+				&& (item->computeDropForwardedInfo() || !keepNames);
+			if (dropCustomEmoji) {
+				text = DropCustomEmoji(std::move(text));
+			}
 		} else {
 			text = Ui::Text::PlainLink(
 				tr::lng_forward_messages(tr::now, lt_count, count));
