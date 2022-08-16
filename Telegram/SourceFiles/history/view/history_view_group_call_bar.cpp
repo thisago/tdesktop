@@ -57,7 +57,11 @@ void GenerateUserpicsInRow(
 		q.setCompositionMode(QPainter::CompositionMode_Source);
 		q.setBrush(Qt::NoBrush);
 		q.setPen(pen);
-		q.drawEllipse(x, 0, single, single);
+		if (style::SquareUserpics()) {
+			q.drawRect(x, 0, single, single);
+		} else {
+			q.drawEllipse(x, 0, single, single);
+		}
 		x -= single - shift;
 	}
 }
