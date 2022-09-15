@@ -416,6 +416,18 @@ public:
 	void setSuggestAnimatedEmoji(bool value) {
 		_suggestAnimatedEmoji = value;
 	}
+	void setCornerReaction(bool value) {
+		_cornerReaction = value;
+	}
+	[[nodiscard]] bool cornerReaction() const {
+		return _cornerReaction.current();
+	}
+	[[nodiscard]] rpl::producer<bool> cornerReactionValue() const {
+		return _cornerReaction.value();
+	}
+	[[nodiscard]] rpl::producer<bool> cornerReactionChanges() const {
+		return _cornerReaction.changes();
+	}
 
 	void setSpellcheckerEnabled(bool value) {
 		_spellcheckerEnabled = value;
@@ -791,6 +803,7 @@ private:
 	bool _suggestEmoji = true;
 	bool _suggestStickersByEmoji = true;
 	bool _suggestAnimatedEmoji = true;
+	rpl::variable<bool> _cornerReaction = true;
 	rpl::variable<bool> _spellcheckerEnabled = true;
 	rpl::variable<float64> _videoPlaybackSpeed = 1.;
 	float64 _voicePlaybackSpeed = 2.;
