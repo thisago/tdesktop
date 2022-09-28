@@ -158,7 +158,6 @@ public:
 		not_null<const Element*> view,
 		Element *replacing);
 	void elementCancelPremium(not_null<const Element*> view);
-	void elementShowSpoilerAnimation();
 
 	void updateBotInfo(bool recount = true);
 
@@ -503,8 +502,6 @@ private:
 	crl::time _touchAccelerationTime = 0;
 	crl::time _touchTime = 0;
 	base::Timer _touchScrollTimer;
-
-	Ui::Animations::Simple _spoilerOpacity;
 
 	// _menu must be destroyed before _whoReactedMenuLifetime.
 	rpl::lifetime _whoReactedMenuLifetime;
