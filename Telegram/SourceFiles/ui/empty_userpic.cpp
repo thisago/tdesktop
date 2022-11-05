@@ -142,7 +142,7 @@ void PaintRepliesMessagesInner(
 		x,
 		y,
 		size,
-		st::dialogsPhotoSize,
+		st::defaultDialogRow.photoSize,
 		st::dialogsRepliesUserpic,
 		fg);
 }
@@ -226,7 +226,7 @@ void EmptyUserpic::paint(
 		int y,
 		int outerWidth,
 		int size) const {
-	paint(p, x, y, outerWidth, size, [&p, x, y, size] {
+	paint(p, x, y, outerWidth, size, [&] {
 		if (Core::App().settings().fork().squareUserpics()) {
 			p.drawRect(x, y, size, size);
 		} else {
@@ -235,14 +235,23 @@ void EmptyUserpic::paint(
 	});
 }
 
-void EmptyUserpic::paintRounded(QPainter &p, int x, int y, int outerWidth, int size) const {
-	paint(p, x, y, outerWidth, size, [&p, x, y, size] {
-		p.drawRoundedRect(x, y, size, size, st::roundRadiusSmall, st::roundRadiusSmall);
+void EmptyUserpic::paintRounded(
+		QPainter &p,
+		int x,
+		int y,
+		int outerWidth,
+		int size,
+		int radius) const {
+	if (!radius) {
+		radius = st::roundRadiusSmall;
+	}
+	paint(p, x, y, outerWidth, size, [&] {
+		p.drawRoundedRect(x, y, size, size, radius, radius);
 	});
 }
 
 void EmptyUserpic::paintSquare(QPainter &p, int x, int y, int outerWidth, int size) const {
-	paint(p, x, y, outerWidth, size, [&p, x, y, size] {
+	paint(p, x, y, outerWidth, size, [&] {
 		p.fillRect(x, y, size, size, p.brush());
 	});
 }
