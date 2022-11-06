@@ -620,8 +620,8 @@ void Widget::setupMainMenuToggle() {
 				controller()->openFolder(folder);
 			}
 		} else if (button == Qt::RightButton) {
-			controller()->content()->choosePeer(
-				session().userPeerId(),
+			controller()->content()->chooseThread(
+				session().user(),
 				ShowAtUnreadMsgId);
 		}
 	});

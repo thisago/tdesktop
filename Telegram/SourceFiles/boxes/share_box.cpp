@@ -518,8 +518,13 @@ void ShareBox::createButtons() {
 		if (!_descriptor.asCopyCallback) {
 			return;
 		}
+		const auto selected = _inner->selected();
 		_descriptor.asCopyCallback(
-			_inner->selected(),
+			ranges::views::all(
+				selected
+			) | ranges::views::transform(
+				&Data::Thread::peer
+			) | ranges::to_vector,
 			_comment->entity()->getTextWithAppliedMarkdown(),
 			emptyText);
 		closeBox();

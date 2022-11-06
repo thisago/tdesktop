@@ -72,17 +72,17 @@ MTPinputMedia InputMediaFromItem(not_null<HistoryItem*> i) {
 MsgId ReplyToIdFromDraft(not_null<PeerData*> peer) {
 	const auto history = peer->owner().history(peer);
 	const auto replyTo = [&]() -> int64 {
-		if (const auto localDraft = history->localDraft()) {
+		if (const auto localDraft = history->localDraft(0)) {
 			return localDraft->msgId.bare;
-		} else if (const auto cloudDraft = history->cloudDraft()) {
+		} else if (const auto cloudDraft = history->cloudDraft(0)) {
 			return cloudDraft->msgId.bare;
 		} else {
 			return 0;
 		}
 	}();
 	if (replyTo) {
-		history->clearCloudDraft();
-		history->clearLocalDraft();
+		history->clearCloudDraft(0);
+		history->clearLocalDraft(0);
 	}
 	return replyTo;
 }
@@ -120,6 +120,7 @@ void SendAlbumFromItems(HistoryItemsList items, ToSend &&toSend) {
 			MTP_flags(flags),
 			peer->input,
 			MTP_int(replyTo),
+			MTP_int(0), // Top msg id.
 			MTP_vector<MTPInputSingleMedia>(medias),
 			MTP_int(0),
 			MTP_inputPeerEmpty()

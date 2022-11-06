@@ -570,7 +570,7 @@ void PaintRow(
 				tr::lng_status_support(tr::now),
 			};
 			if (!ignoredStrings.contains(lastSeen)) {
-				PaintRowTopRight(p, lastSeen, rectForName, active, selected);
+				PaintRowTopRight(p, lastSeen, rectForName, context);
 			}
 		}
 	}

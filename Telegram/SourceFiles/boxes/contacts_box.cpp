@@ -1409,7 +1409,7 @@ void ContactsBox::Inner::chooseParticipant() {
 			addBotToSelectedGroup();
 		} else if (auto peer = selectedPeer()) {
 			Ui::hideSettingsAndLayer(true);
-			App::main()->choosePeer(peer->id, ShowAtUnreadMsgId);
+			App::main()->chooseThread(peer, ShowAtUnreadMsgId);
 		}
 	}
 	update();
