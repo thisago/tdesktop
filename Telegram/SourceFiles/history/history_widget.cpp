@@ -2118,7 +2118,7 @@ void HistoryWidget::showHistory(
 
 	_cornerButtons.clearReplyReturns();
 	if (_history) {
-		if (Ui::InFocusChain(_list)) {
+		if (Ui::InFocusChain(this)) {
 			// Removing focus from list clears selected and updates top bar.
 			setFocus();
 		}
@@ -2321,7 +2321,10 @@ void HistoryWidget::showHistory(
 
 		{
 			_scroll->setTrackingContent(false);
-			const auto checkState = crl::guard(this, [=] {
+			const auto checkState = crl::guard(this, [=, history = _history] {
+				if (history != _history) {
+					return;
+				}
 				auto &sponsored = session().data().sponsoredMessages();
 				using State = Data::SponsoredMessages::State;
 				const auto state = sponsored.state(_history);
@@ -3702,6 +3705,10 @@ void HistoryWidget::saveEditMsg() {
 }
 
 void HistoryWidget::hideChildWidgets() {
+	if (Ui::InFocusChain(this)) {
+		// Removing focus from list clears selected and updates top bar.
+		setFocus();
+	}
 	if (_tabbedPanel) {
 		_tabbedPanel->hideFast();
 	}
