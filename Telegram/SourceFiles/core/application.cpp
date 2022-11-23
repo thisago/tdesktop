@@ -588,6 +588,12 @@ void Application::saveSettings() {
 	Local::writeSettings();
 }
 
+bool Application::canSaveFileWithoutAskingForPath() const {
+	return !Core::App().settings().askDownloadPath()
+		&& (!KSandbox::isInside()
+			|| !Core::App().settings().downloadPath().isEmpty());
+}
+
 MTP::Config &Application::fallbackProductionConfig() const {
 	if (!_fallbackProductionConfig) {
 		_fallbackProductionConfig = std::make_unique<MTP::Config>(
@@ -822,10 +828,6 @@ rpl::producer<bool> Application::appDeactivatedValue() const {
 	)) | rpl::map([=](Qt::ApplicationState state) {
 		return (state != Qt::ApplicationActive);
 	});
-}
-
-void Application::call_handleObservables() {
-	base::HandleObservables();
 }
 
 void Application::switchDebugMode() {
@@ -1445,7 +1447,9 @@ void Application::startShortcuts() {
 void Application::RegisterUrlScheme() {
 	base::Platform::RegisterUrlScheme(base::Platform::UrlSchemeDescriptor{
 		.executable = cExeDir() + cExeName(),
-		.arguments = qsl("-workdir \"%1\"").arg(cWorkingDir()),
+		.arguments = Sandbox::Instance().customWorkingDir()
+			? qsl("-workdir \"%1\"").arg(cWorkingDir())
+			: QString(),
 		.protocol = qsl("tg"),
 		.protocolName = qsl("Telegram Link"),
 		.shortAppName = qsl("tdesktop"),

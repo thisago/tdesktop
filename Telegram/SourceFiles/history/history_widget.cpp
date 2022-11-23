@@ -208,7 +208,7 @@ base::options::toggle AutoScrollInactiveChat({
 [[nodiscard]] rpl::producer<PeerData*> ActivePeerValue(
 		not_null<Window::SessionController*> controller) {
 	return controller->activeChatValue(
-	) | rpl::map([](const Dialogs::Key &key) {
+	) | rpl::map([](Dialogs::Key key) {
 		const auto history = key.history();
 		return history ? history->peer.get() : nullptr;
 	});
@@ -2476,6 +2476,7 @@ void HistoryWidget::setEditMsgId(MsgId msgId) {
 	_editMsgId = msgId;
 	if (_history) {
 		refreshSendAsToggle();
+		orderWidgets();
 	}
 	registerDraftSource();
 }
@@ -2562,7 +2563,7 @@ void HistoryWidget::refreshSilentToggle() {
 
 void HistoryWidget::setupScheduledToggle() {
 	controller()->activeChatValue(
-	) | rpl::map([=](const Dialogs::Key &key) -> rpl::producer<> {
+	) | rpl::map([=](Dialogs::Key key) -> rpl::producer<> {
 		if (const auto history = key.history()) {
 			return session().data().scheduledMessages().updates(history);
 		}
@@ -2600,6 +2601,7 @@ void HistoryWidget::setupSendAsToggle() {
 		refreshSendAsToggle();
 		updateControlsVisibility();
 		updateControlsGeometry();
+		orderWidgets();
 	}, lifetime());
 }
 
@@ -3053,7 +3055,10 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 	}
 }
 
-void HistoryWidget::messagesReceived(PeerData *peer, const MTPmessages_Messages &messages, int requestId) {
+void HistoryWidget::messagesReceived(
+		not_null<PeerData*> peer,
+		const MTPmessages_Messages &messages,
+		int requestId) {
 	Expects(_history != nullptr);
 
 	bool toMigrated = (peer == _peer->migrateFrom());
@@ -3089,8 +3094,9 @@ void HistoryWidget::messagesReceived(PeerData *peer, const MTPmessages_Messages 
 	} break;
 	case mtpc_messages_channelMessages: {
 		auto &d(messages.c_messages_channelMessages());
-		if (peer && peer->isChannel()) {
-			peer->asChannel()->ptsReceived(d.vpts().v);
+		if (const auto channel = peer->asChannel()) {
+			channel->ptsReceived(d.vpts().v);
+			channel->processTopics(d.vtopics());
 		} else {
 			LOG(("API Error: received messages.channelMessages when no channel was passed! (HistoryWidget::messagesReceived)"));
 		}
@@ -3729,6 +3735,9 @@ void HistoryWidget::hideChildWidgets() {
 	}
 	if (_chooseTheme) {
 		_chooseTheme->hide();
+	}
+	if (_contactStatus) {
+		_contactStatus->hide();
 	}
 	hideChildren();
 }
@@ -5699,7 +5708,9 @@ std::optional<int> HistoryWidget::unreadBarTop() const {
 	return std::nullopt;
 }
 
-void HistoryWidget::addMessagesToFront(PeerData *peer, const QVector<MTPMessage> &messages) {
+void HistoryWidget::addMessagesToFront(
+		not_null<PeerData*> peer,
+		const QVector<MTPMessage> &messages) {
 	_list->messagesReceived(peer, messages);
 	if (!_firstLoadRequest) {
 		updateHistoryGeometry();
@@ -5708,7 +5719,7 @@ void HistoryWidget::addMessagesToFront(PeerData *peer, const QVector<MTPMessage>
 }
 
 void HistoryWidget::addMessagesToBack(
-		PeerData *peer,
+		not_null<PeerData*> peer,
 		const QVector<MTPMessage> &messages) {
 	const auto checkForUnreadStart = [&] {
 		if (_history->unreadBar() || !_history->trackUnreadMessages()) {
@@ -6227,20 +6238,15 @@ void HistoryWidget::checkPinnedBarState() {
 		: currentPinnedId.msg;
 	if (universalPinnedId == hiddenId) {
 		if (_pinnedBar) {
+			_pinnedBar->setContent(rpl::single(Ui::MessageBarContent()));
 			_pinnedTracker->reset();
-			auto qobject = base::unique_qptr{
-				Ui::WrapAsQObject(this, std::move(_pinnedBar)).get()
-			};
-			auto destroyer = [this, object = std::move(qobject)]() mutable {
-				object = nullptr;
-				_pinnedBarHeight = 0;
-				updateHistoryGeometry();
-				updateControlsGeometry();
-			};
-			base::call_delayed(
-				st::defaultMessageBar.duration,
-				this,
-				std::move(destroyer));
+			_hidingPinnedBar = base::take(_pinnedBar);
+			const auto raw = _hidingPinnedBar.get();
+			base::call_delayed(st::defaultMessageBar.duration, this, [=] {
+				if (_hidingPinnedBar.get() == raw) {
+					clearHidingPinnedBar();
+				}
+			});
 		}
 		return;
 	}
@@ -6248,6 +6254,7 @@ void HistoryWidget::checkPinnedBarState() {
 		return;
 	}
 
+	clearHidingPinnedBar();
 	_pinnedBar = std::make_unique<Ui::PinnedBar>(this, [=] {
 		return controller()->isGifPausedAtLeastFor(
 			Window::GifPauseReason::Any);
@@ -6332,6 +6339,17 @@ void HistoryWidget::checkPinnedBarState() {
 	if (_a_show.animating()) {
 		_pinnedBar->hide();
 	}
+}
+
+void HistoryWidget::clearHidingPinnedBar() {
+	if (!_hidingPinnedBar) {
+		return;
+	}
+	if (const auto delta = -_pinnedBarHeight) {
+		_pinnedBarHeight = 0;
+		setGeometryWithTopMoved(geometry(), delta);
+	}
+	_hidingPinnedBar = nullptr;
 }
 
 void HistoryWidget::checkMessagesTTL() {
@@ -7536,6 +7554,8 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 					.availableWidth = width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
 					.palette = &st::historyComposeAreaPalette,
 					.spoiler = Ui::Text::DefaultSpoilerCache(),
+					.now = crl::now(),
+					.paused = p.inactive(),
 					.elisionLines = 1,
 				});
 			} else {

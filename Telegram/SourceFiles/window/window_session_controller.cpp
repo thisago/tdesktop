@@ -983,7 +983,9 @@ void SessionController::openForum(
 	if (_openedForum.current() != forum) {
 		resetFakeUnreadWhileOpened();
 	}
-	if (forum && _activeChatEntry.current().key.peer()) {
+	if (forum
+		&& _activeChatEntry.current().key.peer()
+		&& adaptive().isOneColumn()) {
 		clearSectionStack(params);
 	}
 	_openedForum = forum.get();
@@ -995,6 +997,9 @@ void SessionController::openForum(
 				forum,
 				{ anim::type::normal, anim::activation::background });
 		}, _openedForumLifetime);
+	}
+	if (params.activation != anim::activation::background) {
+		hideLayer();
 	}
 }
 
@@ -1229,9 +1234,9 @@ int SessionController::minimalThreeColumnWidth() const {
 }
 
 bool SessionController::forceWideDialogs() const {
-	if (dialogsListDisplayForced().value()) {
+	if (_dialogsListDisplayForced.current()) {
 		return true;
-	} else if (dialogsListFocused().value()) {
+	} else if (_dialogsListFocused.current()) {
 		return true;
 	}
 	return !content()->isMainSectionShown();
