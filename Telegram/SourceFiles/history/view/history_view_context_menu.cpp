@@ -1213,11 +1213,11 @@ void AddSaveSoundForNotifications(
 		Api::ToggleSavedRingtone(
 			document,
 			item->fullId(),
-			[=] {
+			crl::guard(toastParent, [=] {
 				Ui::Toast::Show(
 					toastParent,
 					tr::lng_ringtones_toast_added(tr::now));
-			},
+			}),
 			true);
 	}, &st::menuIconSoundAdd);
 }
