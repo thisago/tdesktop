@@ -59,7 +59,7 @@ const auto kPsaBadgePrefix = "cloud_lng_badge_psa_";
 	} else if (const auto user = history->peer->asUser()) {
 		return (user->onlineTill > 0);
 	}
-	return !history->peer->isForum();
+	return !history->isForum();
 }
 
 void PaintRowTopRight(
@@ -194,6 +194,22 @@ int PaintBadges(
 	return (initial - right);
 }
 
+void PaintExpandedTopicsBar(QPainter &p, float64 progress) {
+	auto hq = PainterHighQualityEnabler(p);
+	const auto radius = st::roundRadiusLarge;
+	const auto width = st::forumDialogRow.padding.left() / 2;
+	p.setPen(Qt::NoPen);
+	p.setBrush(st::dialogsBgActive);
+	p.drawRoundedRect(
+		QRectF(
+			-3. * radius - width * (1. - progress),
+			st::forumDialogRow.padding.top(),
+			3. * radius + width,
+			st::forumDialogRow.photoSize),
+		radius,
+		radius);
+}
+
 void PaintNarrowCounter(
 		QPainter &p,
 		const PaintContext &context,
@@ -277,9 +293,9 @@ void PaintRow(
 		not_null<Entry*> entry,
 		VideoUserpic *videoUserpic,
 		PeerData *from,
-		Ui::PeerBadge &fromBadge,
+		PeerBadge &fromBadge,
 		Fn<void()> customEmojiRepaint,
-		const Ui::Text::String &fromName,
+		const Text::String &fromName,
 		const HiddenSenderInfo *hiddenSenderInfo,
 		HistoryItem *item,
 		const Data::Draft *draft,
@@ -297,7 +313,7 @@ void PaintRow(
 		? st::dialogsBgActive
 		: context.selected
 		? st::dialogsBgOver
-		: st::dialogsBg;
+		: context.currentBg;
 	p.fillRect(geometry, bg);
 	if (!(flags & Flag::TopicJumpRipple)) {
 		auto ripple = context.active
@@ -331,7 +347,7 @@ void PaintRow(
 			(flags & Flag::AllowUserOnline) ? history : nullptr,
 			context);
 	} else if (hiddenSenderInfo) {
-		hiddenSenderInfo->emptyUserpic.paint(
+		hiddenSenderInfo->emptyUserpic.paintCircle(
 			p,
 			context.st->padding.left(),
 			context.st->padding.top(),
@@ -342,6 +358,9 @@ void PaintRow(
 	}
 
 	auto nameleft = context.st->nameLeft;
+	if (context.topicsExpanded > 0.) {
+		PaintExpandedTopicsBar(p, context.topicsExpanded);
+	}
 	if (context.narrow) {
 		if (!draft && item && !item->isEmpty()) {
 			PaintNarrowCounter(p, context, badgesState);
@@ -796,11 +815,18 @@ void PaintUnreadBadge(QPainter &p, const QRect &rect, const UnreadBadgeStyle &st
 	const QString &unreadCount,
 	int allowDigits) {
 	return (allowDigits > 0) && (unreadCount.size() > allowDigits + 1)
-		? qsl("..") + unreadCount.mid(unreadCount.size() - allowDigits)
+		? u".."_q + unreadCount.mid(unreadCount.size() - allowDigits)
 		: unreadCount;
 }
 
 } // namespace
+
+const style::icon *ChatTypeIcon(not_null<PeerData*> peer) {
+	return ChatTypeIcon(peer, {
+		.st = &st::defaultDialogRow,
+		.currentBg = st::windowBg,
+	});
+}
 
 const style::icon *ChatTypeIcon(
 		not_null<PeerData*> peer,
@@ -1137,7 +1163,7 @@ void PaintCollapsedRow(
 		const PaintContext &context) {
 	p.fillRect(
 		QRect{ 0, 0, context.width, st::dialogsImportantBarHeight },
-		context.selected ? st::dialogsBgOver : st::dialogsBg);
+		context.selected ? st::dialogsBgOver : context.currentBg);
 
 	row.paintRipple(p, 0, 0, context.width);
 

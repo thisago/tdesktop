@@ -566,6 +566,10 @@ bool Element::isBubbleAttachedToNext() const {
 	return _flags & Flag::BubbleAttachedToNext;
 }
 
+bool Element::isTopicRootReply() const {
+	return _flags & Flag::TopicRootReply;
+}
+
 int Element::skipBlockWidth() const {
 	return st::msgDateSpace + infoWidth() - st::msgDateDelta.x();
 }
@@ -686,7 +690,7 @@ auto Element::contextDependentServiceText() -> TextWithLinks {
 	}
 	const auto peerId = item->history()->peer->id;
 	const auto topicRootId = item->topicRootId();
-	if (!topicRootId || !peerIsChannel(peerId)) {
+	if (!peerIsChannel(peerId)) {
 		return {};
 	}
 	const auto from = item->from();
@@ -705,7 +709,10 @@ auto Element::contextDependentServiceText() -> TextWithLinks {
 			const QString &title,
 			std::optional<DocumentId> iconId) {
 		return Ui::Text::Link(
-			Data::ForumTopicIconWithTitle(iconId.value_or(0), title),
+			Data::ForumTopicIconWithTitle(
+				topicRootId,
+				iconId.value_or(0),
+				title),
 			topicUrl);
 	};
 	const auto wrapParentTopic = [&] {
@@ -902,7 +909,8 @@ bool Element::computeIsAttachToPrevious(not_null<Element*> previous) {
 				< kAttachMessageToPreviousSecondsDelta)
 			&& mayBeAttached(this)
 			&& mayBeAttached(previous)
-			&& (!previousMarkup || previousMarkup->hiddenBy(prev->media()));
+			&& (!previousMarkup || previousMarkup->hiddenBy(prev->media()))
+			&& (item->topicRootId() == prev->topicRootId());
 		if (possible) {
 			const auto forwarded = item->Get<HistoryMessageForwarded>();
 			const auto prevForwarded = prev->Get<HistoryMessageForwarded>();
@@ -1006,10 +1014,10 @@ void Element::destroyUnreadBar() {
 		return;
 	}
 	RemoveComponents(UnreadBar::Bit());
-	history()->owner().requestViewResize(this);
 	if (data()->mainView() == this) {
 		recountAttachToPreviousInBlocks();
 	}
+	history()->owner().requestViewResize(this);
 }
 
 int Element::displayedDateHeight() const {
@@ -1065,15 +1073,33 @@ void Element::recountDisplayDateInBlocks() {
 }
 
 QSize Element::countOptimalSize() {
+	_flags &= ~Flag::NeedsResize;
 	return performCountOptimalSize();
 }
 
 QSize Element::countCurrentSize(int newWidth) {
 	if (_flags & Flag::NeedsResize) {
-		_flags &= ~Flag::NeedsResize;
 		initDimensions();
 	}
 	return performCountCurrentSize(newWidth);
+}
+
+void Element::refreshIsTopicRootReply() {
+	const auto topicRootReply = countIsTopicRootReply();
+	if (topicRootReply) {
+		_flags |= Flag::TopicRootReply;
+	} else {
+		_flags &= ~Flag::TopicRootReply;
+	}
+}
+
+bool Element::countIsTopicRootReply() const {
+	const auto item = data();
+	if (!item->history()->isForum()) {
+		return false;
+	}
+	const auto replyTo = item->replyToId();
+	return !replyTo || (item->topicRootId() == replyTo);
 }
 
 void Element::setDisplayDate(bool displayDate) {
@@ -1153,6 +1179,10 @@ bool Element::displayFromName() const {
 	return false;
 }
 
+TopicButton *Element::displayedTopicButton() const {
+	return nullptr;
+}
+
 bool Element::displayForwardedFrom() const {
 	return false;
 }
@@ -1195,6 +1225,9 @@ void Element::drawRightAction(
 
 ClickHandlerPtr Element::rightActionLink() const {
 	return ClickHandlerPtr();
+}
+
+void Element::applyRightActionLastPoint(QPoint p) const {
 }
 
 TimeId Element::displayedEditDate() const {

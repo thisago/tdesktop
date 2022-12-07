@@ -9,7 +9,6 @@ Author: 23rd.
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "core/file_utilities.h"
-#include "facades.h"
 #include "lang/lang_keys.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
@@ -298,7 +297,7 @@ void SetupForkContent(
 				Core::App().settings().fork().setAskUriScheme(checked);
 				Core::App().saveSettingsDelayed();
 			};
-			Ui::show(Box<URISchemeBox>(
+			controller->show(Box<URISchemeBox>(
 				std::move(callback),
 				tr::lng_settings_uri_scheme_box_title,
 				tr::lng_settings_uri_scheme_field_label),
@@ -335,7 +334,7 @@ void SetupForkContent(
 				Core::App().settings().fork().setSearchEngine(checked);
 				Core::App().saveSettingsDelayed();
 			};
-			Ui::show(Box<SearchEngineBox>(
+			controller->show(Box<SearchEngineBox>(
 				std::move(callback),
 				tr::lng_settings_search_engine_box_title,
 				tr::lng_settings_search_engine_field_label),
@@ -382,7 +381,7 @@ void SetupForkContent(
 		st::settingsButton,
 		{ &st::settingsIconStickers, kIconLightOrange }
 	)->addClickHandler([=] {
-		Ui::show(Box<StickerSizeBox>([=](bool isSuccess) {
+		controller->show(Box<StickerSizeBox>([=](bool isSuccess) {
 			if (isSuccess) {
 				restartBox([] {}, [] {});
 			}

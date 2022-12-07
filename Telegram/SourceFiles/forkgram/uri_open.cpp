@@ -4,17 +4,15 @@ Author: 23rd.
 
 #include "forkgram/uri_open.h"
 
+#include <optional>
+
 #include "base/platform/base_platform_info.h"
 
 #ifdef Q_OS_WIN
-// For Windows 10.
-#pragma warning(push)
-// class has virtual functions, but destructor is not virtual
-#pragma warning(disable:4265)
-#include <winrt/base.h>
-#pragma warning(pop)
+#include "base/platform/win/base_windows_winrt.h"
 
 #include <winrt/Windows.System.h>
+#include <winrt/Windows.Foundation.h>
 // For Windows 7.
 #include <windows.h>
 #include <shellapi.h>
