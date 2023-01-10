@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/sandbox.h"
 #include "lang/lang_keys.h"
 #include "data/data_session.h"
+#include "data/data_forum_topic.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "base/options.h"
@@ -49,12 +50,6 @@ namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
 
-base::options::toggle ShowChatNameInNewWindow({
-	.id = kOptionShowChatNameInNewWindow,
-	.name = "Chat name in window title",
-	.description = "Show chat name in the additional windows titles.",
-});
-
 const QImage &LogoSquareNoMargin() {
 	static const auto result = QImage(u":/gui/art/logo_256_square.png"_q);
 	return result;
@@ -81,8 +76,6 @@ const QImage &GetForkIconOr(const QImage &l) {
 }
 
 } // namespace
-
-const char kOptionShowChatNameInNewWindow[] = "show-chat-name-in-new-window";
 
 const QImage &Logo() {
 	static const auto result = QImage(u":/gui/art/logo_256.png"_q);
@@ -356,7 +349,9 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 
 	Core::App().unreadBadgeChanges(
 	) | rpl::start_with_next([=] {
-		updateUnreadCounter();
+		updateTitle();
+		unreadCounterChangedHook();
+		Core::App().tray().updateIconCounters();
 	}, lifetime());
 
 	Core::App().settings().workModeChanges(
@@ -448,18 +443,6 @@ bool MainWindow::computeIsActive() const {
 	return isActiveWindow() && isVisible() && !(windowState() & Qt::WindowMinimized);
 }
 
-void MainWindow::updateWindowIcon() {
-	const auto session = sessionController()
-		? &sessionController()->session()
-		: nullptr;
-	const auto supportIcon = session && session->supportMode();
-	if (supportIcon != _usingSupportIcon || _icon.isNull()) {
-		_icon = CreateIcon(session);
-		_usingSupportIcon = supportIcon;
-	}
-	setWindowIcon(_icon);
-}
-
 QRect MainWindow::desktopRect() const {
 	const auto now = crl::now();
 	if (!_monitorLastGot || now >= _monitorLastGot + crl::time(1000)) {
@@ -473,7 +456,6 @@ void MainWindow::init() {
 	createWinId();
 
 	initHook();
-	updateWindowIcon();
 
 	// Non-queued activeChanged handlers must use QtSignalProducer.
 	connect(
@@ -505,7 +487,8 @@ void MainWindow::init() {
 	refreshTitleWidget();
 
 	initGeometry();
-	updateUnreadCounter();
+	updateTitle();
+	updateWindowIcon();
 
 
 
@@ -571,7 +554,8 @@ void MainWindow::showFromTray() {
 		updateGlobalMenu();
 	});
 	activate();
-	updateUnreadCounter();
+	unreadCounterChangedHook();
+	Core::App().tray().updateIconCounters();
 }
 
 void MainWindow::quitFromTray() {
@@ -582,7 +566,7 @@ void MainWindow::activate() {
 	bool wasHidden = !isVisible();
 	setWindowState(windowState() & ~Qt::WindowMinimized);
 	setVisible(true);
-	psActivateProcess();
+	Platform::ActivateThisProcess();
 	raise();
 	activateWindow();
 	controller().updateIsActiveFocus();
@@ -850,30 +834,34 @@ void MainWindow::updateControlsGeometry() {
 	_body->setGeometry(bodyLeft, bodyTop, bodyWidth, inner.height() - (bodyTop - inner.y()));
 }
 
-void MainWindow::updateUnreadCounter() {
+void MainWindow::updateTitle() {
 	if (Core::Quitting()) {
 		return;
 	}
 
-	if (ShowChatNameInNewWindow.value() && singlePeer()) {
-		const auto peer = singlePeer();
-		const auto history = peer->owner().history(peer);
-		const auto name = peer->isSelf()
-			? tr::lng_saved_messages(tr::now)
-			: peer->name();
-		const auto counter = history->unreadCount();
-		setTitle((counter > 0)
-			? u"(%1) %2 \u2013 Telegram"_q.arg(QString::number(counter), name)
-			: u"%1 \u2013 Telegram"_q.arg(name));
-	} else {
-		const auto counter = Core::App().unreadBadge();
-		setTitle((counter > 0)
-			? u"Telegram (%1)"_q.arg(counter)
-			: u"Telegram"_q);
+	const auto counter = Core::App().unreadBadge();
+	const auto basic = (counter > 0)
+		? u"Telegram (%1)"_q.arg(counter)
+		: u"Telegram"_q;
+	const auto session = _controller->sessionController();
+	const auto key = session ? session->activeChatCurrent() : Dialogs::Key();
+	const auto thread = key ? key.thread() : nullptr;
+	if (!thread) {
+		setTitle(basic);
+		return;
 	}
-
-	Core::App().tray().updateIconCounters();
-	unreadCounterChangedHook();
+	const auto history = thread->owningHistory();
+	const auto topic = thread->asTopic();
+	const auto name = topic
+		? topic->title()
+		: history->peer->isSelf()
+		? tr::lng_saved_messages(tr::now)
+		: history->peer->name();
+	const auto threadCounter = thread->chatListBadgesState().unreadCounter;
+	const auto primary = (threadCounter > 0)
+		? u"(%1) %2"_q.arg(threadCounter).arg(name)
+		: name;
+	setTitle(primary + u" \u2013 "_q + basic);
 }
 
 QRect MainWindow::computeDesktopRect() const {

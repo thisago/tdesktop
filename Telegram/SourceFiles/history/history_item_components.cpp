@@ -48,7 +48,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace {
 
 const auto kPsaForwardedPrefix = "cloud_lng_forwarded_psa_";
-constexpr auto kReplyBarAlpha = 230. / 255.;
 
 } // namespace
 
@@ -471,7 +470,7 @@ void HistoryMessageReply::paint(
 			st::msgReplyBarSize.height(),
 			w + 2 * x);
 		const auto opacity = p.opacity();
-		p.setOpacity(opacity * kReplyBarAlpha);
+		p.setOpacity(opacity * kBarAlpha);
 		p.fillRect(rbar, bar);
 		p.setOpacity(opacity);
 	}
