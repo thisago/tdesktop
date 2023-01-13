@@ -24,6 +24,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item.h"
 #include "styles/style_dialogs.h" // st::dialogsTextWidthMin
 
+#include "core/fork_settings.h"
+
 namespace Dialogs {
 namespace {
 
@@ -211,6 +213,17 @@ int Entry::lookupPinnedIndex(FilterId filterId) const {
 
 uint64 Entry::computeSortPosition(FilterId filterId) const {
 	const auto index = lookupPinnedIndex(filterId);
+	if (!index && Core::ForkSettings::PrimaryUnmutedMessages()) {
+	    auto factor = 1;
+		if (const auto history = asHistory()) {
+			const auto muted = history->muted();
+			const auto unreadCount = history->unreadCount();
+			if (!history->isForum() && !muted && unreadCount > 0) {
+				factor = 10;
+			}
+		}
+		return (_sortKeyByDate * factor);
+	}
 	return index ? PinnedDialogPos(index) : _sortKeyByDate;
 }
 

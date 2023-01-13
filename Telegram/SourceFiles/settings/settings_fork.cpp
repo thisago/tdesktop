@@ -415,6 +415,14 @@ void SetupForkContent(
 			Core::App().settings().fork().setEmojiPopupOnClick(checked);
 		});
 
+	//
+	addRestart(
+		tr::lng_settings_primary_unmuted(tr::now),
+		[] { return Core::App().settings().fork().primaryUnmutedMessages(); },
+		[=](bool checked) {
+			Core::App().settings().fork().setPrimaryUnmutedMessages(checked);
+		});
+
 	AddDivider(inner);
 
 }

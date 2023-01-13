@@ -1833,6 +1833,10 @@ void History::setUnreadCount(int newUnreadCount) {
 	} else if (!_firstUnreadView && !_unreadBarView && loadedAtBottom()) {
 		calculateFirstUnreadMessage();
 	}
+	if (Core::ForkSettings::PrimaryUnmutedMessages()) {
+		updateChatListSortPosition();
+		updateChatListEntry();
+	}
 }
 
 void History::setUnreadMark(bool unread) {
@@ -1888,6 +1892,10 @@ void History::setMuted(bool muted) {
 	owner().chatsFilters().refreshHistory(this);
 	if (const auto forum = peer->forum()) {
 		owner().notifySettings().forumParentMuteUpdated(forum);
+	}
+	if (Core::ForkSettings::PrimaryUnmutedMessages()) {
+		updateChatListSortPosition();
+		updateChatListEntry();
 	}
 }
 

@@ -11,9 +11,15 @@ namespace {
 
 constexpr auto kDefaultStickerSize = 256;
 
+bool StaticPrimaryUnmutedMessages = false;
+
 } // namespace
 
 ForkSettings::ForkSettings() {
+}
+
+bool ForkSettings::PrimaryUnmutedMessages() {
+	return StaticPrimaryUnmutedMessages;
 }
 
 QByteArray ForkSettings::serialize() const {
@@ -43,6 +49,7 @@ QByteArray ForkSettings::serialize() const {
 			<< qint32(_autoSubmitPasscode ? 1 : 0)
 			<< qint32(_emojiPopupOnClick ? 1 : 0)
 			<< qint32(_mentionByNameDisabled ? 1 : 0)
+			<< qint32(_primaryUnmutedMessages ? 1 : 0)
 			;
 	}
 	return result;
@@ -70,6 +77,7 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 	qint32 autoSubmitPasscode = _autoSubmitPasscode;
 	qint32 emojiPopupOnClick = _emojiPopupOnClick;
 	qint32 mentionByNameDisabled = _mentionByNameDisabled;
+	qint32 primaryUnmutedMessages = _primaryUnmutedMessages;
 
 	if (!stream.atEnd()) {
 		stream
@@ -87,6 +95,7 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 			>> autoSubmitPasscode
 			>> emojiPopupOnClick
 			>> mentionByNameDisabled
+			>> primaryUnmutedMessages
 			;
 	}
 	if (stream.status() != QDataStream::Ok) {
@@ -110,6 +119,7 @@ void ForkSettings::addFromSerialized(const QByteArray &serialized) {
 	_autoSubmitPasscode = (autoSubmitPasscode == 1);
 	_emojiPopupOnClick = (emojiPopupOnClick == 1);
 	_mentionByNameDisabled = (mentionByNameDisabled == 1);
+	setPrimaryUnmutedMessages(primaryUnmutedMessages == 1);
 }
 
 void ForkSettings::resetOnLastLogout() {
@@ -126,6 +136,15 @@ void ForkSettings::resetOnLastLogout() {
 	_autoSubmitPasscode = false;
 	_emojiPopupOnClick = false;
 	_mentionByNameDisabled = false;
+	setPrimaryUnmutedMessages(false);
+}
+
+[[nodiscard]] bool ForkSettings::primaryUnmutedMessages() const {
+	return _primaryUnmutedMessages;
+}
+void ForkSettings::setPrimaryUnmutedMessages(bool newValue) {
+	StaticPrimaryUnmutedMessages = newValue;
+	_primaryUnmutedMessages = newValue;
 }
 
 } // namespace Core

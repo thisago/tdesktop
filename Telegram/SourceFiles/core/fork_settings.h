@@ -9,6 +9,8 @@ class ForkSettings final {
 public:
 	ForkSettings();
 
+	[[nodiscard]] static bool PrimaryUnmutedMessages();
+
 	[[nodiscard]] QByteArray serialize() const;
 	void addFromSerialized(const QByteArray &serialized);
 
@@ -98,6 +100,8 @@ public:
 	void setMentionByNameDisabled(bool newValue) {
 		_mentionByNameDisabled = newValue;
 	}
+	[[nodiscard]] bool primaryUnmutedMessages() const;
+	void setPrimaryUnmutedMessages(bool newValue);
 
 private:
 	bool _squareUserpics = false;
@@ -114,6 +118,7 @@ private:
 	bool _autoSubmitPasscode = false;
 	bool _emojiPopupOnClick = false;
 	bool _mentionByNameDisabled = false;
+	bool _primaryUnmutedMessages = false;
 
 };
 
