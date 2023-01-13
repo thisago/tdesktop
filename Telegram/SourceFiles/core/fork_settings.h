@@ -92,6 +92,12 @@ public:
 	void setEmojiPopupOnClick(bool newValue) {
 		_emojiPopupOnClick = newValue;
 	}
+	[[nodiscard]] bool mentionByNameDisabled() const {
+		return _mentionByNameDisabled;
+	}
+	void setMentionByNameDisabled(bool newValue) {
+		_mentionByNameDisabled = newValue;
+	}
 
 private:
 	bool _squareUserpics = false;
@@ -107,6 +113,7 @@ private:
 	bool _useOriginalTrayIcon = false;
 	bool _autoSubmitPasscode = false;
 	bool _emojiPopupOnClick = false;
+	bool _mentionByNameDisabled = false;
 
 };
 

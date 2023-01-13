@@ -344,6 +344,14 @@ void SetupForkContent(
 			Core::App().saveSettingsDelayed();
 		}
 	}, searchEngine->lifetime());
+	//
+	add(
+		tr::lng_settings_mention_by_name(tr::now),
+		Core::App().settings().fork().mentionByNameDisabled(),
+		[=](bool checked) {
+			Core::App().settings().fork().setMentionByNameDisabled(checked);
+			Core::App().saveSettingsDelayed();
+		});
 
 #ifndef Q_OS_LINUX
 #ifdef Q_OS_WIN

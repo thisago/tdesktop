@@ -408,8 +408,9 @@ HistoryWidget::HistoryWidget(
 	_fieldAutocomplete->mentionChosen(
 	) | rpl::start_with_next([=](FieldAutocomplete::MentionChosen data) {
 		const auto useUsername =
-			(data.method == FieldAutocomplete::ChooseMethod::ByClick)
-			&& (QGuiApplication::keyboardModifiers() == Qt::ControlModifier);
+			Core::App().settings().fork().mentionByNameDisabled()
+				|| ((data.method == FieldAutocomplete::ChooseMethod::ByClick)
+					&& base::IsCtrlPressed());
 		auto replacement = QString();
 		auto entityTag = QString();
 		if (data.mention.isEmpty() || !useUsername) {
