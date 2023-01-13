@@ -67,6 +67,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
 
+#include "ui/text/format_values.h"
+#include "base/unixtime.h"
+
 namespace Info {
 namespace Profile {
 namespace {
@@ -557,6 +560,20 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 		tr::lng_info_id_label(),
 		IDValue(_peer),
 		tr::lng_profile_copy_id(tr::now));
+	//
+	// Topic ID
+	if (_topic) {
+		const auto date = Ui::FormatDateTime(
+			base::unixtime::parse(_topic->creationDate()));
+		addInfoOneLine(
+			tr::lng_info_id_topic_label(),
+			tr::lng_info_id_topic_value_label(
+				lt_id,
+				rpl::single(QString::number(_topic->rootId().bare)),
+				lt_date,
+				rpl::single(date)) | rpl::map(TextWithEntities::Simple),
+			tr::lng_profile_copy_id(tr::now));
+	}
 	//
 	if (!_peer->isSelf()) {
 		// No notifications toggle for Self => no separator.

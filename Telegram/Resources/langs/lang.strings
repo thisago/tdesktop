@@ -471,6 +471,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 "lng_info_id_label" = "ID";
 "lng_profile_copy_id" = "Copy ID";
+"lng_info_id_topic_label" = "Topic ID";
+"lng_info_id_topic_value_label" = "{id}. Created at: {date}";
 // 
 
 "lng_settings_section_notify" = "Notifications";
