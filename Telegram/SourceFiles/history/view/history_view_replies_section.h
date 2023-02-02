@@ -340,6 +340,7 @@ private:
 	std::unique_ptr<Ui::PinnedBar> _rootView;
 	int _rootViewHeight = 0;
 	bool _rootViewInited = false;
+	bool _rootViewInitScheduled = false;
 	rpl::variable<bool> _rootVisible = false;
 
 	std::unique_ptr<Ui::ScrollArea> _scroll;
@@ -365,11 +366,7 @@ public:
 	RepliesMemento(
 		not_null<History*> history,
 		MsgId rootId,
-		MsgId highlightId = 0)
-	: _history(history)
-	, _rootId(rootId)
-	, _highlightId(highlightId) {
-	}
+		MsgId highlightId = 0);
 	explicit RepliesMemento(
 		not_null<HistoryItem*> commentsItem,
 		MsgId commentId = 0);
@@ -407,6 +404,8 @@ public:
 	const QVector<FullMsgId> &replyReturns() const {
 		return _replyReturns;
 	}
+
+	Data::ForumTopic *topicForRemoveRequests() const override;
 
 	[[nodiscard]] not_null<ListMemento*> list() {
 		return &_list;

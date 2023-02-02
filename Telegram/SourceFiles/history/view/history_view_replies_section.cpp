@@ -133,17 +133,24 @@ rpl::producer<Ui::MessageBarContent> RootViewContent(
 } // namespace
 
 RepliesMemento::RepliesMemento(
-	not_null<HistoryItem*> commentsItem,
-	MsgId commentId)
-: RepliesMemento(commentsItem->history(), commentsItem->id, commentId) {
-	if (commentId) {
+	not_null<History*> history,
+	MsgId rootId,
+	MsgId highlightId)
+: _history(history)
+, _rootId(rootId)
+, _highlightId(highlightId) {
+	if (highlightId) {
 		_list.setAroundPosition({
-			.fullId = FullMsgId(
-				commentsItem->history()->peer->id,
-				commentId),
+			.fullId = FullMsgId(_history->peer->id, highlightId),
 			.date = TimeId(0),
 		});
 	}
+}
+
+RepliesMemento::RepliesMemento(
+	not_null<HistoryItem*> commentsItem,
+	MsgId commentId)
+: RepliesMemento(commentsItem->history(), commentsItem->id, commentId) {
 }
 
 void RepliesMemento::setFromTopic(not_null<Data::ForumTopic*> topic) {
@@ -151,6 +158,11 @@ void RepliesMemento::setFromTopic(not_null<Data::ForumTopic*> topic) {
 	if (!_list.aroundPosition()) {
 		_list = *topic->listMemento();
 	}
+}
+
+
+Data::ForumTopic *RepliesMemento::topicForRemoveRequests() const {
+	return _history->peer->forumTopicFor(_rootId);
 }
 
 void RepliesMemento::setReadInformation(
@@ -2247,14 +2259,16 @@ void RepliesWidget::updatePinnedVisibility() {
 void RepliesWidget::setPinnedVisibility(bool shown) {
 	if (animatingShow()) {
 		return;
-	} else if (!_topic && !_rootViewInited) {
-		const auto height = shown ? st::historyReplyHeight : 0;
-		if (const auto delta = height - _rootViewHeight) {
-			_rootViewHeight = height;
-			if (_scroll->scrollTop() == _scroll->scrollTopMax()) {
-				setGeometryWithTopMoved(geometry(), delta);
-			} else {
-				updateControlsGeometry();
+	} else if (!_topic) {
+		if (!_rootViewInitScheduled) {
+			const auto height = shown ? st::historyReplyHeight : 0;
+			if (const auto delta = height - _rootViewHeight) {
+				_rootViewHeight = height;
+				if (_scroll->scrollTop() == _scroll->scrollTopMax()) {
+					setGeometryWithTopMoved(geometry(), delta);
+				} else {
+					updateControlsGeometry();
+				}
 			}
 		}
 		if (shown) {
@@ -2263,8 +2277,15 @@ void RepliesWidget::setPinnedVisibility(bool shown) {
 			_rootView->hide();
 		}
 		_rootVisible = shown;
-		_rootView->finishAnimating();
-		_rootViewInited = true;
+		if (!_rootViewInited) {
+			_rootView->finishAnimating();
+			if (!_rootViewInitScheduled) {
+				_rootViewInitScheduled = true;
+				InvokeQueued(this, [=] {
+					_rootViewInited = true;
+				});
+			}
+		}
 	} else {
 		_rootVisible = shown;
 	}
@@ -2598,12 +2619,8 @@ void RepliesWidget::setupShortcuts() {
 }
 
 void RepliesWidget::searchInTopic() {
-	if (!_topic) {
-		return;
-	} else if (controller()->isPrimary()) {
+	if (_topic) {
 		controller()->content()->searchInChat(_topic);
-	} else {
-		// #TODO forum window
 	}
 }
 
