@@ -1120,10 +1120,11 @@ void Application::updateWindowTitles() {
 }
 
 void Application::lockByPasscode() {
+	_passcodeLock = true;
 	enumerateWindows([&](not_null<Window::Controller*> w) {
-		_passcodeLock = true;
 		w->setupPasscodeLock();
 	});
+	hideMediaView();
 }
 
 void Application::maybeLockByPasscode() {
