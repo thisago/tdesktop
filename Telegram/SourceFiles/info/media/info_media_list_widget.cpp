@@ -61,6 +61,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 #include "styles/style_chat.h"
 
+#include "history/view/history_view_context_menu_fork.h"
+
 #include <QtWidgets/QApplication>
 #include <QtGui/QClipboard>
 
@@ -1013,6 +1015,10 @@ void ListWidget::showContextMenu(
 				clearSelected();
 			}),
 			&st::menuIconSelect);
+		Fork::AddShowSumDurations(
+			_contextMenu,
+			collectSelectedItems(),
+			_controller->parentController());
 	} else {
 		if (overSelected != SelectionState::NotOverSelectedItems) {
 			const auto selectionData = _provider->computeSelectionData(

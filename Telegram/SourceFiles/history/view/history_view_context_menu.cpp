@@ -76,6 +76,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
 
+#include "history/view/history_view_context_menu_fork.h"
+
 namespace HistoryView {
 namespace {
 
@@ -920,6 +922,10 @@ void AddSelectionAction(
 	if (!AddClearSelectionAction(menu, request, list)) {
 		AddSelectMessageAction(menu, request, list);
 	}
+	Fork::AddShowSumDurations(
+		menu,
+		request.selectedItems,
+		list->controller());
 }
 
 void AddTopMessageActions(
