@@ -232,4 +232,15 @@ mtpRequestId EditTextMessage(
 	return EditMessage(item, caption, options, callback, fail);
 }
 
+namespace Fork {
+
+void EditMessageMedia(
+		not_null<HistoryItem*> item,
+		Api::SendOptions options,
+		MTPInputMedia media) {
+	EditMessageWithUploadedMedia(item, options, media);
+}
+
+} // namespace Fork
+
 } // namespace Api

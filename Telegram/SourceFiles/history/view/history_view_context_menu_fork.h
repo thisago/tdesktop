@@ -68,4 +68,9 @@ void AddShowSumDurations(
 	}
 }
 
+void AddReplaceMedia(
+	not_null<Ui::PopupMenu*> menu,
+	not_null<HistoryItem*> item,
+	not_null<Window::SessionController*> controller);
+
 } // namespace Fork

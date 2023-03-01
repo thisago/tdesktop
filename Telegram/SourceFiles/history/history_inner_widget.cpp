@@ -2159,6 +2159,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		_menu->addAction(tr::lng_background_share(tr::now), [=] {
 			FastShareMessage(controller, item);
 		});
+		Fork::AddReplaceMedia(_menu, item, controller);
 	};
 
 	const auto msg = [=] {
