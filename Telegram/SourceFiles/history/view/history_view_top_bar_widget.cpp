@@ -124,10 +124,10 @@ TopBarWidget::TopBarWidget(
 	_groupCall->setClickedCallback([=] { groupCall(); });
 	_menuToggle->setClickedCallback([=] { showPeerMenu(); });
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
-	_back->addClickHandler([=](auto) {
+	_back->setAcceptBoth();
+	_back->addClickHandler([=](Qt::MouseButton) {
 		InvokeQueued(_back.data(), [=] { backClicked(); });
 	});
-	_back->setAcceptBoth();
 	_cancelChoose->setClickedCallback(
 		[=] { _cancelChooseForReport.fire({}); });
 
