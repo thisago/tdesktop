@@ -124,7 +124,7 @@ TopBarWidget::TopBarWidget(
 	_groupCall->setClickedCallback([=] { groupCall(); });
 	_menuToggle->setClickedCallback([=] { showPeerMenu(); });
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
-	_back->setClickedCallback([=] {
+	_back->addClickHandler([=](auto) {
 		InvokeQueued(_back.data(), [=] { backClicked(); });
 	});
 	_back->setAcceptBoth();

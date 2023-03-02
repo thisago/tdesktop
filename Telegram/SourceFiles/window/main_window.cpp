@@ -89,6 +89,11 @@ const QImage &GetForkIconOr(const QImage &l) {
 			: LogoForkgramNoMargin();
 }
 
+[[nodiscard]] QImage &OverridenIcon() {
+	static auto result = QImage();
+	return result;
+}
+
 } // namespace
 
 const QImage &Logo() {
@@ -148,6 +153,10 @@ void ConvertIconToBlack(QImage &image) {
 	}
 }
 
+void OverrideApplicationIcon(QImage image) {
+	OverridenIcon() = std::move(image);
+}
+
 QIcon CreateOfficialIcon(Main::Session *session) {
 	const auto support = (session && session->supportMode());
 	const auto useBlack = Core::IsAppLaunched()
@@ -155,7 +164,10 @@ QIcon CreateOfficialIcon(Main::Session *session) {
 	if (!support && !useBlack) {
 		return QIcon();
 	}
-	auto image = Logo();
+	auto overriden = OverridenIcon();
+	auto image = overriden.isNull()
+		? Platform::DefaultApplicationIcon()
+		: overriden;
 	ConvertIconToBlack(image);
 	return QIcon(Ui::PixmapFromImage(std::move(image)));
 }

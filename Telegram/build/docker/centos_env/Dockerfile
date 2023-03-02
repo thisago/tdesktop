@@ -1,8 +1,8 @@
 {%- set GIT = "https://github.com" -%}
 {%- set GIT_FREEDESKTOP = GIT ~ "/gitlab-freedesktop-mirrors" -%}
-{%- set QT = "6_4_2" -%}
-{%- set QT_TAG = "v6.4.2" -%}
-{%- set QT_PREFIX = "/usr/local/desktop-app/Qt-6.4.2" -%}
+{%- set QT = "6.5.0" -%}
+{%- set QT_TAG = "v" ~ QT ~ "-beta3" -%}
+{%- set QT_PREFIX = "/usr/local/desktop-app/Qt-" ~ QT -%}
 {%- set OPENSSL_VER = "1_1_1" -%}
 {%- set OPENSSL_PREFIX = "/usr/local/desktop-app/openssl-1.1.1" -%}
 {%- set CMAKE_VER = "3.24.3" -%}
@@ -14,6 +14,7 @@
 # syntax=docker/dockerfile:1
 
 FROM centos:7 AS builder-base
+ENV LANG en_US.UTF-8
 ENV LIBRARY_PATH /usr/local/lib64:/usr/local/lib:/lib64:/lib:/usr/lib64:/usr/lib
 ENV LD_LIBRARY_PATH $LIBRARY_PATH
 ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig
@@ -21,7 +22,7 @@ ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/loc
 RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
 	&& yum -y install https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo.x86_64.rpm \
 	&& yum -y install centos-release-scl \
-	&& yum -y install git rh-python38-python-pip autoconf automake libtool patch \
+	&& yum -y install git rh-python38-python-pip autoconf automake libtool patch gperf \
 		fontconfig-devel freetype-devel libX11-devel at-spi2-core-devel alsa-lib-devel \
 		pulseaudio-libs-devel mesa-libGL-devel mesa-libEGL-devel mesa-libgbm-devel \
 		libdrm-devel vulkan-devel gtk3-devel \
@@ -56,7 +57,7 @@ ENV CXXFLAGS $CFLAGS
 FROM builder AS patches
 RUN git clone {{ GIT }}/desktop-app/patches.git \
 	&& cd patches \
-	&& git checkout 9aa30bc442 \
+	&& git checkout 73f5d4762f \
 	&& rm -rf .git
 
 FROM builder AS nasm
@@ -157,7 +158,7 @@ RUN git clone -b v1.0.9 --depth=1 {{ GIT }}/google/brotli.git \
 	&& rm -rf brotli
 
 FROM builder AS highway
-RUN git clone -b 1.0.2 --depth=1 {{ GIT }}/google/highway.git \
+RUN git clone -b 1.0.3 --depth=1 {{ GIT }}/google/highway.git \
 	&& cd highway \
 	&& cmake -GNinja -B build . \
 		-DCMAKE_BUILD_TYPE=None \
@@ -208,11 +209,12 @@ RUN git clone -b 1.0.0 --depth=1 {{ GIT }}/videolan/dav1d.git \
 	&& rm -rf dav1d
 
 FROM builder AS libde265
-RUN git clone -b v1.0.9 --depth=1 {{ GIT }}/strukturag/libde265.git \
+RUN git clone -b v1.0.11 --depth=1 {{ GIT }}/strukturag/libde265.git \
 	&& cd libde265 \
 	&& cmake -GNinja . \
 		-DCMAKE_BUILD_TYPE=None \
 		-DBUILD_SHARED_LIBS=OFF \
+		-DENABLE_DECODER=OFF \
 		-DENABLE_SDL=OFF \
 	&& cmake --build . --parallel \
 	&& DESTDIR="{{ LibrariesPath }}/libde265-cache" cmake --install . \
@@ -252,14 +254,19 @@ RUN git clone -b v0.11.1 --depth=1 {{ GIT }}/AOMediaCodec/libavif.git \
 FROM builder AS libheif
 COPY --link --from=libde265 {{ LibrariesPath }}/libde265-cache /
 
-RUN git clone -b v1.14.0 --depth=1 {{ GIT }}/strukturag/libheif.git \
+RUN git clone -b v1.15.1 --depth=1 {{ GIT }}/strukturag/libheif.git \
 	&& cd libheif \
 	&& cmake -GNinja -B build . \
 		-DCMAKE_BUILD_TYPE=None \
 		-DBUILD_SHARED_LIBS=OFF \
+		-DENABLE_PLUGIN_LOADING=OFF \
 		-DWITH_X265=OFF \
-		-DWITH_AOM=OFF \
+		-DWITH_AOM_DECODER=OFF \
+		-DWITH_AOM_ENCODER=OFF \
 		-DWITH_RAV1E=OFF \
+		-DWITH_RAV1E_PLUGIN=OFF \
+		-DWITH_SvtEnc=OFF \
+		-DWITH_SvtEnc_PLUGIN=OFF \
 		-DWITH_DAV1D=OFF \
 		-DWITH_EXAMPLES=OFF \
 	&& cmake --build build --parallel \
@@ -272,7 +279,7 @@ COPY --link --from=lcms2 {{ LibrariesPath }}/lcms2-cache /
 COPY --link --from=brotli {{ LibrariesPath }}/brotli-cache /
 COPY --link --from=highway {{ LibrariesPath }}/highway-cache /
 
-RUN git clone -b v0.7.0 --depth=1 {{ GIT }}/libjxl/libjxl.git \
+RUN git clone -b v0.8.1 --depth=1 {{ GIT }}/libjxl/libjxl.git \
 	&& cd libjxl \
 	&& cmake -GNinja -B build . \
 		-DCMAKE_BUILD_TYPE=None \
@@ -280,6 +287,7 @@ RUN git clone -b v0.7.0 --depth=1 {{ GIT }}/libjxl/libjxl.git \
 		-DBUILD_TESTING=OFF \
 		-DJPEGXL_ENABLE_DEVTOOLS=OFF \
 		-DJPEGXL_ENABLE_TOOLS=OFF \
+		-DJPEGXL_ENABLE_JPEGLI_LIBJPEG=OFF \
 		-DJPEGXL_ENABLE_DOXYGEN=OFF \
 		-DJPEGXL_ENABLE_MANPAGES=OFF \
 		-DJPEGXL_ENABLE_BENCHMARK=OFF \
@@ -374,6 +382,19 @@ RUN git clone -b 0.3.9 --depth=1 --recursive {{ GIT_FREEDESKTOP }}/libxcb-render
 	&& make DESTDIR="{{ LibrariesPath }}/xcb-render-util-cache" install \
 	&& cd .. \
 	&& rm -rf libxcb-render-util
+
+FROM builder AS xcb-cursor
+COPY --link --from=xcb-util {{ LibrariesPath }}/xcb-util-cache /
+COPY --link --from=xcb-image {{ LibrariesPath }}/xcb-image-cache /
+COPY --link --from=xcb-render-util {{ LibrariesPath }}/xcb-render-util-cache /
+
+RUN git clone -b xcb-util-cursor-0.1.4 --depth=1 --recursive {{ GIT_FREEDESKTOP }}/libxcb-cursor.git \
+	&& cd libxcb-cursor \
+	&& ./autogen.sh --enable-static \
+	&& make -j$(nproc) \
+	&& make DESTDIR="{{ LibrariesPath }}/xcb-cursor-cache" install \
+	&& cd .. \
+	&& rm -rf libxcb-cursor
 
 FROM builder AS libXext
 RUN git clone -b libXext-1.3.4 --depth=1 {{ GIT_FREEDESKTOP }}/libxext.git \
@@ -686,6 +707,7 @@ COPY --link --from=xcb-util {{ LibrariesPath }}/xcb-util-cache /
 COPY --link --from=xcb-image {{ LibrariesPath }}/xcb-image-cache /
 COPY --link --from=xcb-keysyms {{ LibrariesPath }}/xcb-keysyms-cache /
 COPY --link --from=xcb-render-util {{ LibrariesPath }}/xcb-render-util-cache /
+COPY --link --from=xcb-cursor {{ LibrariesPath }}/xcb-cursor-cache /
 COPY --link --from=wayland {{ LibrariesPath }}/wayland-cache /
 COPY --link --from=openssl {{ LibrariesPath }}/openssl-cache /
 COPY --link --from=xkbcommon {{ LibrariesPath }}/xkbcommon-cache /
@@ -698,9 +720,11 @@ RUN git clone -b {{ QT_TAG }} --depth=1 git://code.qt.io/qt/qt5.git qt_{{ QT }} 
 	&& cd qtbase \
 	&& find ../../patches/qtbase_{{ QT }} -type f -print0 | sort -z | xargs -r0 git apply \
 	&& cd ../qtdeclarative \
-	&& sed -i '/add_subdirectory(quickcontrols2)/d' src/CMakeLists.txt \
-	&& sed -i '/add_subdirectory(quickdialogs2)/d' src/CMakeLists.txt \
+	&& sed -i '/add_subdirectory(quickcontrols)/d' src/CMakeLists.txt \
+	&& sed -i '/add_subdirectory(quickdialogs)/d' src/CMakeLists.txt \
 	&& sed -i '/add_subdirectory(quicknativestyle)/d' src/CMakeLists.txt \
+	&& cd ../qtwayland \
+	&& sed -i '/| MFD_ALLOW_SEALING/{n;N;d}' src/client/qwaylandshmbackingstore.cpp \
 	&& cd .. \
 	&& ./configure -prefix "{{ QT_PREFIX }}" \
 		CMAKE_BUILD_TYPE=None \
@@ -804,6 +828,7 @@ COPY --link --from=xcb-util {{ LibrariesPath }}/xcb-util-cache /
 COPY --link --from=xcb-image {{ LibrariesPath }}/xcb-image-cache /
 COPY --link --from=xcb-keysyms {{ LibrariesPath }}/xcb-keysyms-cache /
 COPY --link --from=xcb-render-util {{ LibrariesPath }}/xcb-render-util-cache /
+COPY --link --from=xcb-cursor {{ LibrariesPath }}/xcb-cursor-cache /
 COPY --link --from=libXext {{ LibrariesPath }}/libXext-cache /
 COPY --link --from=libXfixes {{ LibrariesPath }}/libXfixes-cache /
 COPY --link --from=libXtst {{ LibrariesPath }}/libXtst-cache /
@@ -827,6 +852,9 @@ COPY --link --from=webrtc_debug {{ LibrariesPath }}/tg_owt/out/Debug tg_owt/out/
 {%- endif %}
 
 WORKDIR ../tdesktop
+ENV QT {{ QT }}
+ENV OPENSSL_ROOT_DIR {{ OPENSSL_PREFIX }}
+
 VOLUME [ "/usr/src/tdesktop" ]
 ENTRYPOINT [ "scl", "enable", "rh-python38", "--", "scl", "enable", "llvm-toolset-7.0", "--", "scl", "enable", "devtoolset-10", "--" ]
 CMD [ "/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh" ]

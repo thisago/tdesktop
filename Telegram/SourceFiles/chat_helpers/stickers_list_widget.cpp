@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/premium_graphics.h"
 #include "ui/image/image.h"
 #include "ui/cached_round_corners.h"
+#include "ui/power_saving.h"
 #include "lottie/lottie_multi_player.h"
 #include "lottie/lottie_single_player.h"
 #include "lottie/lottie_animation.h"
@@ -266,10 +267,14 @@ auto StickersListWidget::choosingUpdated() const
 object_ptr<TabbedSelector::InnerFooter> StickersListWidget::createFooter() {
 	Expects(_footer == nullptr);
 
+	const auto footerPaused = [method = pausedMethod()] {
+		return On(PowerSaving::kStickersPanel) || method();
+	};
+
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
 		.session = &session(),
-		.paused = pausedMethod(),
+		.paused = footerPaused,
 		.parent = this,
 		.settingsButtonVisible = true,
 	});
@@ -855,7 +860,8 @@ void StickersListWidget::paintStickers(Painter &p, QRect clip) {
 		: &_selected);
 
 	const auto now = crl::now();
-	const auto paused = this->paused();
+	const auto paused = On(PowerSaving::kStickersPanel)
+		|| this->paused();
 	if (sets.empty() && _section == Section::Search) {
 		paintEmptySearchResults(p);
 	}
