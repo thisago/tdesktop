@@ -103,6 +103,7 @@ object_ptr<Ui::AbstractButton> DefaultOverlayWidgetHelper::Buttons::create(
 		case Control::Minimize: return &st::mediaviewTitleMinimize;
 		case Control::Maximize: return &st::mediaviewTitleMaximize;
 		case Control::Close: return &st::mediaviewTitleClose;
+		case Control::OnTop: return &st::mediaviewTitleClose;
 		}
 		Unexpected("Value in DefaultOverlayWidgetHelper::Buttons::create.");
 	}();
