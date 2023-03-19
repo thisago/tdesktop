@@ -74,7 +74,7 @@ std::map<int, const char*> BetaLogs() {
 		"- Improved windowed mode support for media viewer.\n"
 
 		"- Hardware accelerated video playback fix on macOS.\n"
-		
+
 		"- New application icon on macOS following the system guidelines.\n"
 	},
 	{
@@ -82,6 +82,49 @@ std::map<int, const char*> BetaLogs() {
 		"- Fix crash when accepting incoming calls.\n"
 
 		"- Remove sound when cancelling an unconfirmed call.\n"
+	},
+	{
+		4006008,
+		"- Improve quality of voice messages with changed playback speed.\n"
+
+		"- Show when your message was read in small groups.\n"
+
+		"- Fix pasting images from Firefox on Windows.\n"
+
+		"- Improve memory usage for custom emoji.\n"
+	},
+	{
+		4006010,
+		"- Suggest sending an invite link if user forbids "
+		"inviting him to groups.\n"
+
+		"- Show when a reaction was left on your message in small groups.\n"
+
+		"- Fix a crash in video chats on Windows.\n"
+
+		"- Fix a crash in audio speed change.\n"
+	},
+	{
+		4006011,
+		"- Allow larger interface scale values on high-dpi screens.\n"
+
+		"- Implement new voice and video speed change interface (up to 2.5x).\n"
+
+		"- Support global Fn+F shortcut to toggle fullscreen on macOS.\n"
+
+		"- Silent notification sound in Focus Mode on macOS.\n"
+
+		"- Fix media viewer on macOS with several screens.\n"
+		
+		"- Fix a crash in connection type box.\n"
+
+		"- Fix possible crash on quit.\n"
+	},
+	{
+		4006012,
+		"- Fix several possible crashes.\n"
+
+		"- Deprecate macOS 10.12, Ubuntu 18.04 and CentOS 7 in July.\n"
 	}
 	};
 };

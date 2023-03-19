@@ -101,6 +101,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 #include <QtGui/QScreen>
 
+#include <kurlmimedata.h>
+
 namespace Media {
 namespace View {
 namespace {
@@ -474,8 +476,33 @@ OverlayWidget::OverlayWidget()
 		}
 		return base::EventFilterResult::Continue;
 	});
+	_helper->mouseEvents(
+	) | rpl::start_with_next([=](not_null<QMouseEvent*> e) {
+		const auto type = e->type();
+		const auto position = e->pos();
+		if (_helper->skipTitleHitTest(position)) {
+			return;
+		}
+		if (type == QEvent::MouseButtonPress) {
+			handleMousePress(position, e->button());
+		} else if (type == QEvent::MouseButtonRelease) {
+			handleMouseRelease(position, e->button());
+		} else if (type == QEvent::MouseMove) {
+			handleMouseMove(position);
+		} else if (type == QEvent::MouseButtonDblClick) {
+			if (!handleDoubleClick(position, e->button())) {
+				handleMousePress(position, e->button());
+			}
+		}
+	}, lifetime());
+	_topShadowRight = _helper->controlsSideRightValue();
+	_topShadowRight.changes(
+	) | rpl::start_with_next([=] {
+		updateControlsGeometry();
+		update();
+	}, lifetime());
 
-	_window->setTitle(u"Media viewer"_q);
+	_window->setTitle(tr::lng_mediaview_title(tr::now));
 	_window->setTitleStyle(st::mediaviewTitle);
 
 	if constexpr (Platform::IsMac()) {
@@ -803,11 +830,21 @@ void OverlayWidget::updateControlsGeometry() {
 	const auto bottom = st::mediaviewShadowBottom.height();
 	const auto top = st::mediaviewShadowTop.size();
 	_bottomShadowRect = QRect(0, height() - bottom, width(), bottom);
-	_topShadowRect = QRect(QPoint(width() - top.width(), 0), top);
+	_topShadowRect = QRect(
+		QPoint(topShadowOnTheRight() ? (width() - top.width()) : 0, 0),
+		top);
+
+	if (_dropdown && !_dropdown->isHidden()) {
+		_dropdown->moveToRight(0, height() - _dropdown->height());
+	}
 
 	updateControls();
 	resizeContentByScreenSize();
 	update();
+}
+
+bool OverlayWidget::topShadowOnTheRight() const {
+	return _topShadowRight.current();
 }
 
 QSize OverlayWidget::flipSizeByRotation(QSize size) const {
@@ -1097,7 +1134,7 @@ void OverlayWidget::updateControls() {
 		}
 		return dNow;
 	}();
-	_dateText = Ui::FormatDateTime(d);
+	_dateText = d.isValid() ? Ui::FormatDateTime(d) : QString();
 	if (!_fromName.isEmpty()) {
 		_fromNameLabel.setText(st::mediaviewTextStyle, _fromName, Ui::NameTextOptions());
 		_nameNav = QRect(st::mediaviewTextLeft, height() - st::mediaviewTextTop, qMin(_fromNameLabel.maxWidth(), width() / 3), st::mediaviewFont->height);
@@ -1795,6 +1832,10 @@ void OverlayWidget::minimize() {
 	_helper->minimize(_window);
 }
 
+void OverlayWidget::toggleFullScreen() {
+	toggleFullScreen(!_fullscreen);
+}
+
 void OverlayWidget::toggleFullScreen(bool fullscreen) {
 	_helper->clearState();
 	_fullscreen = fullscreen;
@@ -2033,14 +2074,16 @@ void OverlayWidget::handleDocumentClick() {
 	if (_document->loading()) {
 		saveCancel();
 	} else {
+		_reShow = true;
 		Data::ResolveDocument(
 			findWindow(),
 			_document,
 			_message,
 			_topicRootId);
-		if (_document->loading() && !_radial.animating()) {
+		if (_document && _document->loading() && !_radial.animating()) {
 			_radial.start(_documentMedia->progress());
 		}
+		_reShow = false;
 	}
 }
 
@@ -2813,7 +2856,7 @@ void OverlayWidget::show(OpenRequest request) {
 	const auto contextItem = request.item();
 	const auto contextPeer = request.peer();
 	const auto contextTopicRootId = request.topicRootId();
-	if (!request.continueStreaming() && !request.startTime()) {
+	if (!request.continueStreaming() && !request.startTime() && !_reShow) {
 		if (_message && (_message == contextItem)) {
 			return close();
 		} else if (_user && (_user == contextPeer)) {
@@ -3712,10 +3755,8 @@ void OverlayWidget::playbackControlsSpeedChanged(float64 speed) {
 	}
 }
 
-float64 OverlayWidget::playbackControlsCurrentSpeed() {
-	const auto result = Core::App().settings().videoPlaybackSpeed();
-	DEBUG_LOG(("Media playback speed: now %1.").arg(result));
-	return result;
+float64 OverlayWidget::playbackControlsCurrentSpeed(bool lastNonDefault) {
+	return Core::App().settings().videoPlaybackSpeed(lastNonDefault);
 }
 
 void OverlayWidget::switchToPip() {
@@ -5143,10 +5184,12 @@ bool OverlayWidget::filterApplicationEvent(
 		const auto ctrl = event->modifiers().testFlag(Qt::ControlModifier);
 		if (key == Qt::Key_F && ctrl && _streamed) {
 			playbackToggleFullScreen();
+			return true;
 		} else if (key == Qt::Key_0 && ctrl) {
 			zoomReset();
+			return true;
 		}
-		return true;
+		return false;
 	} else if (type == QEvent::MouseMove
 		|| type == QEvent::MouseButtonPress
 		|| type == QEvent::MouseButtonRelease) {

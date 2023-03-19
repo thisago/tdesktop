@@ -57,7 +57,7 @@ ENV CXXFLAGS $CFLAGS
 FROM builder AS patches
 RUN git clone {{ GIT }}/desktop-app/patches.git \
 	&& cd patches \
-	&& git checkout 73f5d4762f \
+	&& git checkout 4b35c02c5e \
 	&& rm -rf .git
 
 FROM builder AS nasm
@@ -490,7 +490,7 @@ COPY --link --from=nv-codec-headers {{ LibrariesPath }}/nv-codec-headers-cache /
 RUN git init ffmpeg \
 	&& cd ffmpeg \
 	&& git remote add origin {{ GIT }}/FFmpeg/FFmpeg.git \
-	&& git fetch --depth=1 origin cc33e73618a981de7fd96385ecb34719de031f16 \
+	&& git fetch --depth=1 origin 7268323193d55365f914de39fadd5dbdb1f68976 \
 	&& git reset --hard FETCH_HEAD \
 	&& ./configure \
 		--extra-cflags="-DCONFIG_SAFE_BITSTREAM_READER=1" \
@@ -585,6 +585,7 @@ RUN git init ffmpeg \
 		--enable-decoder=wmav2 \
 		--enable-decoder=wmavoice \
 		--enable-encoder=libopus \
+		--enable-filter=atempo \
 		--enable-parser=aac \
 		--enable-parser=aac_latm \
 		--enable-parser=flac \
@@ -677,7 +678,7 @@ RUN git clone -b xkbcommon-1.3.1 --depth=1 {{ GIT }}/xkbcommon/libxkbcommon.git 
 FROM patches AS glibmm
 COPY --link --from=libffi {{ LibrariesPath }}/libffi-cache /
 
-RUN git clone -b 2.74.0 --depth=1 {{ GIT }}/GNOME/glibmm.git \
+RUN git clone -b 2.76.0 --depth=1 {{ GIT }}/GNOME/glibmm.git \
 	&& cd glibmm \
 	&& git apply ../patches/glibmm.patch \
 	&& CFLAGS="$CFLAGS {{ CFLAGS_LTO }}" CXXFLAGS="$CXXFLAGS {{ CFLAGS_LTO }}" meson build \

@@ -450,6 +450,8 @@ PRIVATE
     data/data_audio_msg_id.h
     data/data_auto_download.cpp
     data/data_auto_download.h
+    data/data_bot_app.cpp
+    data/data_bot_app.h
     data/data_chat.cpp
     data/data_chat.h
     data/data_chat_filters.cpp
@@ -954,10 +956,6 @@ PRIVATE
     media/audio/media_audio_track.h
     media/audio/media_child_ffmpeg_loader.cpp
     media/audio/media_child_ffmpeg_loader.h
-    media/audio/media_openal_functions.cpp
-    media/audio/media_openal_functions.h
-    media/player/media_player_button.cpp
-    media/player/media_player_button.h
     media/player/media_player_float.cpp
     media/player/media_player_float.h
     media/player/media_player_instance.cpp

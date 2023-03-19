@@ -38,6 +38,9 @@ public:
 	[[nodiscard]] virtual rpl::producer<> controlsActivations() {
 		return rpl::never<>();
 	}
+	[[nodiscard]] virtual rpl::producer<bool> controlsSideRightValue() {
+		return rpl::single(true);
+	}
 	virtual void beforeShow(bool fullscreen) {
 	}
 	virtual void afterShow(bool fullscreen) {
@@ -48,6 +51,10 @@ public:
 	virtual void clearState() {
 	}
 	virtual void setControlsOpacity(float64 opacity) {
+	}
+	[[nodiscard]] virtual auto mouseEvents() const
+	-> rpl::producer<not_null<QMouseEvent*>> {
+		return rpl::never<not_null<QMouseEvent*>>();
 	}
 };
 
@@ -68,6 +75,8 @@ public:
 	void beforeShow(bool fullscreen) override;
 	void clearState() override;
 	void setControlsOpacity(float64 opacity) override;
+	rpl::producer<bool> controlsSideRightValue() override;
+	rpl::producer<not_null<QMouseEvent*>> mouseEvents() const override;
 
 private:
 	class Buttons;

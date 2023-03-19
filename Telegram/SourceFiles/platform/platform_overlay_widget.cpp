@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/effects/animations.h"
 #include "ui/platform/ui_platform_window_title.h"
+#include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/abstract_button.h"
 #include "styles/style_media_view.h"
@@ -225,6 +226,13 @@ rpl::producer<> DefaultOverlayWidgetHelper::controlsActivations() {
 	return _buttons->activations();
 }
 
+rpl::producer<bool> DefaultOverlayWidgetHelper::controlsSideRightValue() {
+	return Ui::Platform::TitleControlsLayoutValue() | rpl::map([=] {
+		return _controls->controls.geometry().center().x()
+			> _controls->wrap.geometry().center().x();
+	}) | rpl::distinct_until_changed();
+}
+
 void DefaultOverlayWidgetHelper::beforeShow(bool fullscreen) {
 	_buttons->clearState();
 }
@@ -235,6 +243,20 @@ void DefaultOverlayWidgetHelper::clearState() {
 
 void DefaultOverlayWidgetHelper::setControlsOpacity(float64 opacity) {
 	_buttons->setMasterOpacity(opacity);
+}
+
+auto DefaultOverlayWidgetHelper::mouseEvents() const
+-> rpl::producer<not_null<QMouseEvent*>> {
+	return _controls->wrap.events(
+	) | rpl::filter([](not_null<QEvent*> e) {
+		const auto type = e->type();
+		return (type == QEvent::MouseButtonPress)
+			|| (type == QEvent::MouseButtonRelease)
+			|| (type == QEvent::MouseMove)
+			|| (type == QEvent::MouseButtonDblClick);
+	}) | rpl::map([](not_null<QEvent*> e) {
+		return not_null{ static_cast<QMouseEvent*>(e.get()) };
+	});
 }
 
 } // namespace Platform
