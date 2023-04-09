@@ -332,9 +332,7 @@ void MonospaceClickHandler::onClick(ClickContext context) const {
 	if (const auto controller = my.sessionWindow.get()) {
 		auto &data = controller->session().data();
 		const auto item = data.message(my.itemId);
-		const auto hasCopyRestriction = item
-			&& (!item->history()->peer->allowsForwarding()
-				|| item->forbidsForward());
+		const auto hasCopyRestriction = false;
 		const auto toastParent = Window::Show(controller).toastParent();
 		if (hasCopyRestriction) {
 			Ui::Toast::Show(
