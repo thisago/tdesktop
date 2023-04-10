@@ -75,6 +75,7 @@ jobs:
           rm -rfv /__t/go
           rm -rfv /__t/CodeQL
           rm -rfv $LibrariesPath/tg_owt/out/Debug
+
       - name: Clone.
         uses: actions/checkout@v3.1.0
         with:
@@ -85,22 +86,31 @@ jobs:
         run: |
           gcc --version
           ln -s /usr/src/Libraries
+
           yum -y install epel-release
           yum -y install wget p7zip
+
           cd $REPO_NAME
           cd ..
+
           mkdir DesktopPrivate
           cd DesktopPrivate
+
           echo "#pragma once" > alpha_private.h
           echo "#pragma once" > packer_private.h
+
           echo '${{ secrets.ALPHA_PRIVATE }}' >> alpha_private.h
           echo '${{ secrets.PACKER_PRIVATE }}' >> packer_private.h
+
           cd ..
+
           wget ${{ secrets.PACK_FILE }} -O p.7z
           7za x p.7z -p${{ secrets.PACK_FILE_PASSWORD }}
+
       - name: Telegram Desktop build.
         run: |
           cd $REPO_NAME/Telegram
+
           DEFINE=""
           if [ -n "${{ matrix.defines }}" ]; then
             DEFINE="-D ${{ matrix.defines }}=ON"
@@ -109,6 +119,7 @@ jobs:
           else
             echo "ARTIFACT_NAME=Telegram" >> $GITHUB_ENV
           fi
+
           ./configure.sh \
           -D CMAKE_EXE_LINKER_FLAGS="-s" \
           -D TDESKTOP_API_ID=${{ secrets.API_ID }} \
@@ -116,28 +127,34 @@ jobs:
           -D DESKTOP_APP_SPECIAL_TARGET=linux \
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
           $DEFINE
+
           cmake --build ../out --config Release --parallel
+
       - name: Check.
         run: |
           filePath="$REPO_NAME/out/Release/Telegram"
           if test -f "$filePath"; then
             echo "Build successfully done! :)"
+
             size=$(stat -c %s "$filePath")
             echo "File size of ${filePath}: ${size} Bytes."
           else
             echo "Build error, output file does not exist."
             exit 1
           fi
+
       - name: Compress.
         if: (github.event_name == 'release')
         run: |
           filePath="$REPO_NAME/out/Release/Telegram"
           cp $filePath .
           tar -cJvf Telegram.tar.xz Telegram
+
       - name: Deploy.
         if: (github.event_name == 'release')
         run: |
           bash ci_start.sh &> /dev/null
+
       - name: Upload.
         if: (github.event_name == 'release')
         uses: svenstaro/upload-release-action@2.3.0
